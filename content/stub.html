@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+  <title>Compose</title>
+  <link rel="stylesheet" type="text/css" href="chrome://kompose/skin/compose.css">
+  <link rel="stylesheet" type="text/css" href="../skin/compose.css">
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script type="text/javascript" src="ckeditor/ckeditor_source.js"></script>
+  <script type="application/javascript;version=1.8">
+    let Cc = Components.classes;
+    let Ci = Components.interfaces;
+    let Cu = Components.utils;
+    let Cr = Components.results;
+
+    let msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
+                               .QueryInterface(Ci.nsIMsgComposeService);
+
+    let messenger = Cc["@mozilla.org/messenger;1"].createInstance()
+                       .QueryInterface(Ci.nsIMessenger);
+
+    let msgWindow = Cc["@mozilla.org/messenger/msgwindow;1"].createInstance()
+                       .QueryInterface(Ci.nsIMsgWindow);
+
+    let accountManager = Cc["@mozilla.org/messenger/account-manager;1"]
+                        .getService(Ci.nsIMsgAccountManager);
+
+    function showAdvancedFields() {
+      $("#cc").closest("tr").fadeIn("slow");
+      $("#bcc").closest("tr").fadeIn("slow");
+      $("#more").closest("td").fadeOut("slow");
+    }
+
+    function send() {
+      let fields = Cc["@mozilla.org/messengercompose/composefields;1"]
+                      .createInstance(Ci.nsIMsgCompFields);
+      fields.to = $("#to").val();
+      fields.cc = $("#cc").val();
+      fields.bcc = $("#bcc").val();
+      fields.subject = $("#subject").val();
+      fields.body = CKEDITOR.instances.editor.getData();
+
+      // we'll get this from the UI eventually
+      fields.from = msgComposeService.defaultIdentity.email;
+
+      //fields.forcePlainText = true;
+      fields.useMultipartAlternative = true;
+
+      let params = Cc["@mozilla.org/messengercompose/composeparams;1"]
+                      .createInstance(Ci.nsIMsgComposeParams);
+      params.composeFields = fields;
+      params.identity = msgComposeService.defaultIdentity;
+      params.type = Ci.nsIMsgCompType.New;
+      params.format = Ci.nsIMsgCompFormat.Default;
+
+      let msgAccountManager = Cc["@mozilla.org/messenger/account-manager;1"]
+                                .getService(Ci.nsIMsgAccountManager);
+
+      let compose = msgComposeService.InitCompose (null, params);
+      compose.SendMsg (Ci.nsIMsgCompDeliverMode.Now,
+                       msgAccountManager.defaultAccount.defaultIdentity,
+                       "", null, null);
+      return true;
+    }
+  </script>
+</head>
+
+<body>
+  <div id="wrapper">
+    <div id="fields">
+      <table>
+        <tr>
+          <td>To</td>
+          <td><input class="field" type="text" id="to" name="send_to" /></td>
+          <td>
+            <a href="javascript:" id="more" onclick="showAdvancedFields();">(moar!)</a>
+          </td>
+        </tr>
+        <tr style="display: none;">
+          <td>Cc</td>
+          <td><input class="field" type="text" id="cc" name="send_to_cc" /></td>
+        </tr>
+        <tr style="display: none;">
+          <td>Bcc</td>
+          <td><input class="field" type="text" id="bcc" name="send_to_bcc" /></td>
+        </tr>
+        <tr>
+          <td>Subject</td>
+          <td><input class="field" type="text" id="subject" /></td>
+        </tr>
+      </table>
+    </div>
+    <div id="toolbar">
+      <button id="send" onclick="send();">Send</button>
+      <button id="save">Save for later</button>
+    </div>
+    <div id="editorWrapper">
+      <textarea name="editor">
+        Write here.
+      </textarea>
+      <script type="text/javascript">
+        CKEDITOR.replace('editor');
+      </script>
+    </div>
+  </div>
+</body>
+</html>

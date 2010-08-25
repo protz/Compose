@@ -1,0 +1,7 @@
+content kompose content/
+skin kompose classic/1.0 skin/
+resource kompose modules/
+overlay chrome://messenger/content/messenger.xul chrome://kompose/content/overlay.xul
+style chrome://global/content/customizeToolbar.xul chrome://kompose/skin/overlay.css
+
+locale kompose en-US locale/en-US/

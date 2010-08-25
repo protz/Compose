@@ -1,0 +1,78 @@
+html {
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+  min-width: 100%;
+}
+
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+button::-moz-focus-inner { border: 0; }
+
+button {
+  background-image: -moz-linear-gradient(top, #fefefe 0%, #d5d5d5 100%);
+  border: 1px solid #919191;
+  -moz-box-shadow: 0 1px 0 rgba(255,255,255,0.55);
+  -moz-border-radius: 3px;
+  text-align: center;
+  outline: none;
+  height: 22px;
+  cursor: pointer;
+}
+
+button:active {
+  background-image: none;
+  background-color: #d5d5d5;
+  -moz-box-shadow: inset 0 0 2px #666;
+  border: 1px solid #666;
+}
+
+button img {
+  vertical-align: middle;
+}
+
+.field {
+  width: 400px;
+}
+
+#toolbar {
+  margin: 1em 0;
+}
+
+#moar {
+  font-size: small;
+}
+
+#fields td:first-child {
+  font-variant: small-caps;
+  font-weight: bold;
+  padding-right: 1em;
+}
+
+/* Make sure we take all available height */
+
+body,
+#wrapper, #editorWrapper, #cke_editor, .cke_browser_gecko, 
+.cke_wrapper,
+.cke_editor,
+.cke_editor > tbody,
+.cke_editor > tbody > tr:nth-child(2),
+.cke_editor > tbody > tr:nth-child(2) > td,
+.cke_editor > tbody > tr:nth-child(2) > td > iframe {
+  display: -moz-box !important;
+  -moz-box-orient: vertical;
+  -moz-box-flex: 1;
+}  
+
+#wrapper {
+  padding: 7px;
+}
+
+.cke_resizer {
+  display: none !important;
+}
