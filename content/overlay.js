@@ -37,20 +37,18 @@
 let KomposeManager = null;
 
 window.addEventListener("load", function _overlay_eventListener () {
-  let Log;
   let NS = {};
   try {
-    //Components.utils.import("resource://kompose/log.js", NS);
-    //Log = NS.setupLogging();
+    Components.utils.import("resource://kompose/log.js", NS);
   } catch (e) {
-    dump(e);
+    dump(e+"\n");
   }
   try {
     Components.utils.import("resource://kompose/main.js", NS);
     KomposeManager = new NS.KomposeManager();
   } catch (e) {
-    Log.error(e);
-    dumpCallStack(e);
+    NS.Log.error(e);
+    NS.dumpCallStack(e);
   }
 
   // Ideally, we would replace the nsMsgComposeService with our own, but for the

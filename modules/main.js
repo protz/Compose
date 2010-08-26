@@ -6,7 +6,6 @@ let Cu = Components.utils;
 let Cr = Components.results;
 
 Cu.import("resource://kompose/log.js");
-let Log = setupLogging();
 
 let kComposeUrl = "chrome://kompose/content/stub.html";
 

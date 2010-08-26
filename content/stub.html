@@ -15,7 +15,6 @@
     let Cr = Components.results;
 
     Cu.import("resource://kompose/log.js");
-    let Log = setupLogging();
     Log.debug("New compose tab opened...");
 
     let msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
@@ -76,6 +75,7 @@
         Log.debug("iframe", iframe);
       } catch (e) {
         Log.error(e);
+        dumpCallStack(e);
       }
     }, false);
   </script>
