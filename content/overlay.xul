@@ -38,13 +38,4 @@
 
 <overlay id="messengerWindow" xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <script type="application/x-javascript" src="overlay.js" />
-  <toolbarpalette id="MailToolbarPalette">
-    <toolbarbutton id="kompose-button-2"
-      class="kompose-button-2 toolbarbutton-1"
-      label="Write in tab"
-      type="button"
-      tooltiptext=""
-      oncommand="Kompose.new();"
-      />
-  </toolbarpalette>
 </overlay>

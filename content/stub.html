@@ -14,6 +14,10 @@
     let Cu = Components.utils;
     let Cr = Components.results;
 
+    Cu.import("resource://kompose/log.js");
+    let Log = setupLogging();
+    Log.debug("New compose tab opened...");
+
     let msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
                                .QueryInterface(Ci.nsIMsgComposeService);
 
@@ -63,6 +67,17 @@
                        "", null, null);
       return true;
     }
+
+    window.addEventListener("load", function () {
+      try {
+        let data = window.frameElement.data;
+        Log.debug("data.url", data.url);
+        let iframe = document.getElementsByTagName("iframe")[0];
+        Log.debug("iframe", iframe);
+      } catch (e) {
+        Log.error(e);
+      }
+    }, false);
   </script>
 </head>
 

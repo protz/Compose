@@ -34,10 +34,142 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var Kompose = null;
+let KomposeManager = null;
 
 window.addEventListener("load", function _overlay_eventListener () {
+  let Log;
   let NS = {};
-  Components.utils.import("resource://kompose/main.js", NS);
-  Kompose = new NS.Kompose(window);
+  try {
+    //Components.utils.import("resource://kompose/log.js", NS);
+    //Log = NS.setupLogging();
+  } catch (e) {
+    dump(e);
+  }
+  try {
+    Components.utils.import("resource://kompose/main.js", NS);
+    KomposeManager = new NS.KomposeManager();
+  } catch (e) {
+    Log.error(e);
+    dumpCallStack(e);
+  }
+
+  // Ideally, we would replace the nsMsgComposeService with our own, but for the
+  // time being, let's just stick to that monkey-patch. When it's about time,
+  // we'll just register a new XPCom components with the same contract-id
+  // (@messenger/compose;1) and it'll be fine.
+  ComposeMessage = function _ComposeMessage_patched (type, format, folder, messageArray) {
+    var msgComposeType = Components.interfaces.nsIMsgCompType;
+    var identity = null;
+    var newsgroup = null;
+    var server;
+
+    // dump("ComposeMessage folder=" + folder + "\n");
+    try
+    {
+      if (folder)
+      {
+        // Get the incoming server associated with this uri.
+        server = folder.server;
+
+        // If they hit new or reply and they are reading a newsgroup,
+        // turn this into a new post or a reply to group.
+        if (!folder.isServer && server.type == "nntp" && type == msgComposeType.New)
+        {
+          type = msgComposeType.NewsPost;
+          newsgroup = folder.folderURL;
+        }
+
+        identity = folder.customIdentity;
+        if (!identity)
+          identity = getIdentityForServer(server);
+        // dump("identity = " + identity + "\n");
+      }
+    }
+    catch (ex)
+    {
+      dump("failed to get an identity to pre-select: " + ex + "\n");
+    }
+
+    // dump("\nComposeMessage from XUL: " + identity + "\n");
+    var uri = null;
+
+    if (!msgComposeService)
+    {
+      dump("### msgComposeService is invalid\n");
+      return;
+    }
+
+    if (type == msgComposeType.New)
+    {
+      // New message.
+
+      // dump("OpenComposeWindow with " + identity + "\n");
+
+      // If the addressbook sidebar panel is open and has focus, get
+      // the selected addresses from it.
+      if (document.commandDispatcher.focusedWindow &&
+          document.commandDispatcher.focusedWindow
+                  .document.documentElement.hasAttribute("selectedaddresses"))
+        NewMessageToSelectedAddresses(type, format, identity);
+      else
+        KomposeManager.OpenComposeWindow(null, null, null, type, format, identity, msgWindow);
+      return;
+    }
+    else if (type == msgComposeType.NewsPost)
+    {
+      // dump("OpenComposeWindow with " + identity + " and " + newsgroup + "\n");
+      KomposeManager.OpenComposeWindow(null, null, newsgroup, type, format, identity, msgWindow);
+      return;
+    }
+
+    messenger.setWindow(window, msgWindow);
+
+    var object = null;
+
+    if (messageArray && messageArray.length > 0)
+    {
+      uri = "";
+      for (var i = 0; i < messageArray.length; ++i)
+      {
+        var messageUri = messageArray[i];
+
+        var hdr = messenger.msgHdrFromURI(messageUri);
+        identity = getIdentityForHeader(hdr, type);
+        if (/^https?:/.test(hdr.messageId))
+          openComposeWindowForRSSArticle(hdr, type);
+        else if (type == msgComposeType.Reply ||
+                 type == msgComposeType.ReplyAll ||
+                 type == msgComposeType.ReplyToList ||
+                 type == msgComposeType.ForwardInline ||
+                 type == msgComposeType.ReplyToGroup ||
+                 type == msgComposeType.ReplyToSender ||
+                 type == msgComposeType.ReplyToSenderAndGroup ||
+                 type == msgComposeType.Template ||
+                 type == msgComposeType.Redirect ||
+                 type == msgComposeType.Draft)
+        {
+          KomposeManager.OpenComposeWindow(null, hdr, messageUri, type, format, identity, msgWindow);
+          // Limit the number of new compose windows to 8. Why 8 ? I like that number :-)
+          if (i == 7)
+            break;
+        }
+        else
+        {
+          if (i)
+            uri += ","
+          uri += messageUri;
+        }
+      }
+      // If we have more than one ForwardAsAttachment then pass null instead
+      // of the header to tell the compose service to work out the attachment
+      // subjects from the URIs.
+      if (type == msgComposeType.ForwardAsAttachment && uri)
+        KomposeManager.OpenComposeWindow(null,
+                                            messageArray.length > 1 ? null : hdr,
+                                            uri, type, format,
+                                            identity, msgWindow);
+    }
+    else
+      dump("### nodeList is invalid\n");
+  };
 }, false);
