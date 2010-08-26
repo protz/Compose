@@ -27,17 +27,22 @@ KomposeManager.prototype = {
   //                        in nsIMsgIdentity identity, 
   //                        in nsIMsgWindow aMsgWindow);
   OpenComposeWindow: function (aUrl, aMsgHdr, aOriginalUrl, aType, aFormat, aIdentity, aMsgWindow) {
-    // so unsafe, OMG
-    let newTab = this.tabmail.openTab("composeTab", {
-      url: aUrl,
-      msgHdr: aMsgHdr,
-      originalUrl: aOriginalUrl,
-      type: aType,
-      format: aFormat,
-      identity: aIdentity,
-      msgWindow: aMsgWindow,
-      KomposeManager: this,
-    });
+    try {
+      // so unsafe, OMG
+      let newTab = this.tabmail.openTab("composeTab", {
+        url: aUrl,
+        msgHdr: aMsgHdr,
+        originalUrl: aOriginalUrl,
+        type: aType,
+        format: aFormat,
+        identity: aIdentity,
+        msgWindow: aMsgWindow,
+        KomposeManager: this,
+      });
+    } catch (e) {
+      Log.error(e);
+      dumpCallStack(e);
+    }
   },
 
   composeTabType: {

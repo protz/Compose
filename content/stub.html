@@ -13,71 +13,53 @@
     let Ci = Components.interfaces;
     let Cu = Components.utils;
     let Cr = Components.results;
+    let data = window.frameElement.data;
 
+    Cu.import("resource://kompose/compose.js");
     Cu.import("resource://kompose/log.js");
-    Log.debug("New compose tab opened...");
+    Log.debug(data.url, data.msgHdr, data.originalUrl, data.type,
+      data.format, data.identity, data.msgWindow, data.KomposeManager);
 
-    let msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
-                               .QueryInterface(Ci.nsIMsgComposeService);
+    let mCompType = Ci.nsIMsgCompType;
 
-    let messenger = Cc["@mozilla.org/messenger;1"].createInstance()
-                       .QueryInterface(Ci.nsIMessenger);
-
-    let msgWindow = Cc["@mozilla.org/messenger/msgwindow;1"].createInstance()
-                       .QueryInterface(Ci.nsIMsgWindow);
-
-    let accountManager = Cc["@mozilla.org/messenger/account-manager;1"]
-                        .getService(Ci.nsIMsgAccountManager);
-
-    function showAdvancedFields() {
+    function onShowAdvancedFields() {
       $("#cc").closest("tr").fadeIn("slow");
       $("#bcc").closest("tr").fadeIn("slow");
       $("#more").closest("td").fadeOut("slow");
     }
 
-    function send() {
-      let fields = Cc["@mozilla.org/messengercompose/composefields;1"]
-                      .createInstance(Ci.nsIMsgCompFields);
-      fields.to = $("#to").val();
-      fields.cc = $("#cc").val();
-      fields.bcc = $("#bcc").val();
-      fields.subject = $("#subject").val();
-      fields.body = CKEDITOR.instances.editor.getData();
-
-      // we'll get this from the UI eventually
-      fields.from = msgComposeService.defaultIdentity.email;
-
-      //fields.forcePlainText = true;
-      fields.useMultipartAlternative = true;
-
-      let params = Cc["@mozilla.org/messengercompose/composeparams;1"]
-                      .createInstance(Ci.nsIMsgComposeParams);
-      params.composeFields = fields;
-      params.identity = msgComposeService.defaultIdentity;
-      params.type = Ci.nsIMsgCompType.New;
-      params.format = Ci.nsIMsgCompFormat.Default;
-
-      let msgAccountManager = Cc["@mozilla.org/messenger/account-manager;1"]
-                                .getService(Ci.nsIMsgAccountManager);
-
-      let compose = msgComposeService.InitCompose (null, params);
-      compose.SendMsg (Ci.nsIMsgCompDeliverMode.Now,
-                       msgAccountManager.defaultAccount.defaultIdentity,
-                       "", null, null);
-      return true;
+    function onSendMsg() {
+      sendMessage({
+          to: $("#to").val(),
+          cc: $("#cc").val(),
+          bcc: $("#bcc").val(),
+          subject: $("#subject").val(),
+          body: CKEDITOR.instances.editor.getData(),
+        });
     }
 
-    window.addEventListener("load", function () {
-      try {
-        let data = window.frameElement.data;
-        Log.debug("data.url", data.url);
-        let iframe = document.getElementsByTagName("iframe")[0];
-        Log.debug("iframe", iframe);
-      } catch (e) {
-        Log.error(e);
-        dumpCallStack(e);
+    function setupEditor() {
+      Log.debug("data.type is", data.type);
+      if (data.type == mCompType.ReplyToSender) {
+        Log.assert(data.msgHdr, "How can I reply to an empty MsgHdr?");
+
+        try {
+          quoteMessage(
+            data.msgHdr,
+            document.getElementById("secret"),
+            function (aHtml) {
+              document.getElementById("editor").textContent =
+                "<p></p><blockquote type='cite'>"+aHtml+"</blockquote>";
+              CKEDITOR.replace("editor");
+            });
+        } catch (e) {
+          Log.error(e);
+          dumpCallStack(e);
+        }
       }
-    }, false);
+    }
+
+    window.addEventListener("load", setupEditor, false);
   </script>
 </head>
 
@@ -89,7 +71,8 @@
           <td>To</td>
           <td><input class="field" type="text" id="to" name="send_to" /></td>
           <td>
-            <a href="javascript:" id="more" onclick="showAdvancedFields();">(moar!)</a>
+            <a tabindex="-1" href="javascript:" id="more"
+              onclick="onShowAdvancedFields();">(moar!)</a>
           </td>
         </tr>
         <tr style="display: none;">
@@ -107,17 +90,15 @@
       </table>
     </div>
     <div id="toolbar">
-      <button id="send" onclick="send();">Send</button>
+      <button id="send" onclick="onSendMsg();">Send</button>
       <button id="save">Save for later</button>
     </div>
     <div id="editorWrapper">
-      <textarea name="editor">
-        Write here.
+      <textarea id="editor" name="editor">
       </textarea>
-      <script type="text/javascript">
-        CKEDITOR.replace('editor');
-      </script>
     </div>
+  </div>
+  <div id="secret">
   </div>
 </body>
 </html>
