@@ -8,59 +8,7 @@
   <link rel="stylesheet" type="text/css" href="../skin/compose.css">
   <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
   <script type="text/javascript" src="ckeditor/ckeditor_source.js"></script>
-  <script type="application/javascript;version=1.8">
-    let Cc = Components.classes;
-    let Ci = Components.interfaces;
-    let Cu = Components.utils;
-    let Cr = Components.results;
-    let data = window.frameElement.data;
-
-    Cu.import("resource://kompose/compose.js");
-    Cu.import("resource://kompose/log.js");
-    Log.debug(data.url, data.msgHdr, data.originalUrl, data.type,
-      data.format, data.identity, data.msgWindow, data.KomposeManager);
-
-    let mCompType = Ci.nsIMsgCompType;
-
-    function onShowAdvancedFields() {
-      $("#cc").closest("tr").fadeIn("slow");
-      $("#bcc").closest("tr").fadeIn("slow");
-      $("#more").closest("td").fadeOut("slow");
-    }
-
-    function onSendMsg() {
-      sendMessage({
-          to: $("#to").val(),
-          cc: $("#cc").val(),
-          bcc: $("#bcc").val(),
-          subject: $("#subject").val(),
-          body: CKEDITOR.instances.editor.getData(),
-        });
-    }
-
-    function setupEditor() {
-      Log.debug("data.type is", data.type);
-      if (data.type == mCompType.ReplyToSender) {
-        Log.assert(data.msgHdr, "How can I reply to an empty MsgHdr?");
-
-        try {
-          quoteMessage(
-            data.msgHdr,
-            document.getElementById("secret"),
-            function (aHtml) {
-              document.getElementById("editor").textContent =
-                "<p></p><blockquote type='cite'>"+aHtml+"</blockquote>";
-              CKEDITOR.replace("editor");
-            });
-        } catch (e) {
-          Log.error(e);
-          dumpCallStack(e);
-        }
-      }
-    }
-
-    window.addEventListener("load", setupEditor, false);
-  </script>
+  <script type="application/javascript;version=1.8" src="ui.js"></script>
 </head>
 
 <body>
@@ -68,10 +16,14 @@
     <div id="fields">
       <table>
         <tr>
+          <td>From</td>
+          <td><select id="from"></select></td>
+        </tr>
+        <tr>
           <td>To</td>
           <td><input class="field" type="text" id="to" name="send_to" /></td>
           <td>
-            <a tabindex="-1" href="javascript:" id="more"
+            <a tabindex="-1" href="javascript:" id="moar"
               onclick="onShowAdvancedFields();">(moar!)</a>
           </td>
         </tr>

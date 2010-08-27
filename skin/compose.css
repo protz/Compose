@@ -45,7 +45,8 @@ button img {
 }
 
 #moar {
-  font-size: small;
+  font-size: 10px;
+  text-decoration: none;
 }
 
 #fields td:first-child {

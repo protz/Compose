@@ -35,25 +35,26 @@ function msgHdrToNeckoURL(aMsgHdr) {
 /**
  * Actually send the message based on the given parameters.
  */
-function sendMessage({ to, cc, bcc, subject, body }, { onSuccess, onFailure }) {
+function sendMessage({ identity, to, cc, bcc, subject, body }, { onSuccess, onFailure }) {
   let fields = Cc["@mozilla.org/messengercompose/composefields;1"]
                   .createInstance(Ci.nsIMsgCompFields);
+  fields.from = identity.fullName + " <" + identity.email + ">";
   fields.to = to;
   fields.cc = cc;
   fields.bcc = bcc;
   fields.subject = subject;
   fields.body = body;
+  // fields.references (depending on data.type)
+  // fields.addAttachment (todo)
 
-  // we'll get this from the UI eventually
-  fields.from = msgComposeService.defaultIdentity.email;
-
-  //fields.forcePlainText = true;
+  fields.forcePlainText = true;
   fields.useMultipartAlternative = true;
+  fields.ConvertBodyToPlainText();
 
   let params = Cc["@mozilla.org/messengercompose/composeparams;1"]
                   .createInstance(Ci.nsIMsgComposeParams);
   params.composeFields = fields;
-  params.identity = msgComposeService.defaultIdentity;
+  params.identity = identity;
   params.type = Ci.nsIMsgCompType.New;
   params.format = Ci.nsIMsgCompFormat.Default;
 
@@ -71,7 +72,8 @@ const kXulNs = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
 /**
  * Find out what's the quoted HTML for the given message header. This is done by
- * inserting a XUL iframe into the div and calling k when done.
+ * inserting a XUL iframe into the div, getting its innerHTML, removing it and
+ * and calling k when done.
  */
 function quoteMessage(msgHdr, div, k) {
   let iframe = div.ownerDocument.createElementNS(kXulNs, "iframe");
@@ -112,8 +114,6 @@ function quoteMessage(msgHdr, div, k) {
         OnStopRunningUrl: function () {},
         QueryInterface: XPCOMUtils.generateQI([Ci.nsISupports, Ci.nsIUrlListener])
       };
-      // messageService.DisplayMessage(uri, iframe.docShell, msgWindow,
-      //                            urlListener, aCharset, {});
       iframe.webNavigation.loadURI(url.spec+"?header=quotebody",
         iframe.webNavigation.LOAD_FLAGS_IS_LINK, null, null, null);
     } catch (e) {
