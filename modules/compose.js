@@ -8,14 +8,15 @@ let Cr = Components.results;
 Cu.import("resource:///modules/XPCOMUtils.jsm"); // for generateQI
 Cu.import("resource://kompose/log.js");
 
-let msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
+const msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
                            .QueryInterface(Ci.nsIMsgComposeService);
-let messenger = Cc["@mozilla.org/messenger;1"].createInstance()
+const messenger = Cc["@mozilla.org/messenger;1"].createInstance()
                    .QueryInterface(Ci.nsIMessenger);
-let msgWindow = Cc["@mozilla.org/messenger/msgwindow;1"].createInstance()
+const msgWindow = Cc["@mozilla.org/messenger/msgwindow;1"].createInstance()
                    .QueryInterface(Ci.nsIMsgWindow);
-let accountManager = Cc["@mozilla.org/messenger/account-manager;1"]
+const accountManager = Cc["@mozilla.org/messenger/account-manager;1"]
                         .getService(Ci.nsIMsgAccountManager);
+const mCompType = Ci.nsIMsgCompType;
 
 const kCharsetFromMetaTag = 10;
 
@@ -32,10 +33,18 @@ function msgHdrToNeckoURL(aMsgHdr) {
   return neckoURL.value;
 }
 
+function range(begin, end) {
+  for (let i = begin; i < end; ++i) {
+    yield i;
+  }
+}
+
 /**
  * Actually send the message based on the given parameters.
  */
-function sendMessage({ identity, to, cc, bcc, subject, body }, { onSuccess, onFailure }) {
+function sendMessage({ identity, to, cc, bcc, subject, body },
+    { url, msgHdr, originalUrl, type, format, msgWindow, KomposeManager },
+    { onSuccess, onFailure }) {
   let fields = Cc["@mozilla.org/messengercompose/composefields;1"]
                   .createInstance(Ci.nsIMsgCompFields);
   fields.from = identity.fullName + " <" + identity.email + ">";
@@ -44,8 +53,34 @@ function sendMessage({ identity, to, cc, bcc, subject, body }, { onSuccess, onFa
   fields.bcc = bcc;
   fields.subject = subject;
   fields.body = body;
-  // fields.references (depending on data.type)
-  // fields.addAttachment (todo)
+
+  let references = [];
+  switch (type) {
+    case mCompType.New:
+      break;
+
+    case mCompType.Reply:
+    case mCompType.ReplyAll:
+    case mCompType.ReplyToSender:
+    case mCompType.ReplyToGroup:
+    case mCompType.ReplyToSenderAndGroup:
+    case mCompType.ReplyWithTemplate:
+    case mCompType.ReplyToList:
+      references = [msgHdr.getStringReference(i)
+        for each (i in range(0, msgHdr.numReferences))];
+      references.push(msgHdr.messageId);
+      break;
+
+    case mCompType.ForwardAsAttachment:
+    case mCompType.ForwardInline:
+      references.push(msgHdr.messageId);
+      break;
+  }
+  references = ["<"+x+">" for each (let [, x] in Iterator(references))];
+  fields.references = references.join(", ");
+
+  // TODO:
+  // - fields.addAttachment (when attachments taken into account)
 
   fields.forcePlainText = true;
   fields.useMultipartAlternative = true;

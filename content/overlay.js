@@ -53,7 +53,7 @@ window.addEventListener("load", function _overlay_eventListener () {
 
   // Ideally, we would replace the nsMsgComposeService with our own, but for the
   // time being, let's just stick to that monkey-patch. When it's about time,
-  // we'll just register a new XPCom components with the same contract-id
+  // we'll just register a new XPCOM component with the same contract-id
   // (@messenger/compose;1) and it'll be fine.
   ComposeMessage = function _ComposeMessage_patched (type, format, folder, messageArray) {
     var msgComposeType = Components.interfaces.nsIMsgCompType;

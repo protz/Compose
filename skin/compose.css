@@ -55,6 +55,11 @@ button img {
   padding-right: 1em;
 }
 
+.autocomplete-thumb {
+  height: 22px;
+  vertical-align: middle;
+}
+
 /* Make sure we take all available height */
 
 body,

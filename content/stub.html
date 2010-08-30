@@ -4,9 +4,10 @@
 
 <head>
   <title>Compose</title>
-  <link rel="stylesheet" type="text/css" href="chrome://kompose/skin/compose.css">
-  <link rel="stylesheet" type="text/css" href="../skin/compose.css">
+  <link rel="stylesheet" type="text/css" href="chrome://kompose/skin/compose.css" />
+  <link rel="stylesheet" type="text/css" href="chrome://kompose/content/fb-autocomplete/style.css" />
   <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script type="text/javascript" src="fb-autocomplete/jquery.tokeninput.js"></script>
   <script type="text/javascript" src="ckeditor/ckeditor_source.js"></script>
   <script type="application/javascript;version=1.8" src="ui.js"></script>
 </head>
@@ -21,7 +22,7 @@
         </tr>
         <tr>
           <td>To</td>
-          <td><input class="field" type="text" id="to" name="send_to" /></td>
+          <td><input class="field" type="text" id="to" /></td>
           <td>
             <a tabindex="-1" href="javascript:" id="moar"
               onclick="onShowAdvancedFields();">(moar!)</a>
@@ -29,11 +30,11 @@
         </tr>
         <tr style="display: none;">
           <td>Cc</td>
-          <td><input class="field" type="text" id="cc" name="send_to_cc" /></td>
+          <td><input class="field" type="text" id="cc" /></td>
         </tr>
         <tr style="display: none;">
           <td>Bcc</td>
-          <td><input class="field" type="text" id="bcc" name="send_to_bcc" /></td>
+          <td><input class="field" type="text" id="bcc" /></td>
         </tr>
         <tr>
           <td>Subject</td>
@@ -42,8 +43,8 @@
       </table>
     </div>
     <div id="toolbar">
-      <button id="send" onclick="onSendMsg();">Send</button>
-      <button id="save">Save for later</button>
+      <button id="send" onclick="onSendMsg();" tabindex="-1">Send</button>
+      <button id="save" tabindex="-1">Save for later</button>
     </div>
     <div id="editorWrapper">
       <textarea id="editor" name="editor">
