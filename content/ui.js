@@ -27,6 +27,20 @@ function onShowAdvancedFields() {
 }
 
 function onSendMsg() {
+  let body = CKEDITOR.instances.editor.getData();
+  // We're Thunderbird, so make sure we send 1999-style HTML!
+  body = 
+    "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"+
+    "<html>\n"+
+    "  <head>\n"+
+    "    <meta http-equiv=\"content-type\" content=\"text/html;\n"+
+    "      charset=ISO-8859-1\">\n"+
+    "  </head>\n"+
+    "  <body bgcolor=\"#ffffff\" text=\"#000000\">\n"+
+    "    "+body+"\n"+
+    "  </body>\n"+
+    "</html>";
+
   Log.debug(
       "identity", gIdentities[$("#from").val()],
       "from", $("#from").val(),
@@ -34,7 +48,7 @@ function onSendMsg() {
       "cc", $("#cc").val(),
       "bcc", $("#bcc").val(),
       "subject", $("#subject").val(),
-      "body", CKEDITOR.instances.editor.getData());
+      "body", body);
   //return;
   sendMessage(
     {
@@ -43,7 +57,7 @@ function onSendMsg() {
       cc: $("#cc").val(),
       bcc: $("#bcc").val(),
       subject: $("#subject").val(),
-      body: CKEDITOR.instances.editor.getData(),
+      body: body,
     }, data, {
       onSuccess: null,
       onFailure: null,

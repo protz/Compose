@@ -76,15 +76,15 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
       references.push(msgHdr.messageId);
       break;
   }
-  references = ["<"+x+">" for each (let [, x] in Iterator(references))];
+  references = ["<"+x+">" for each ([, x] in Iterator(references))];
   fields.references = references.join(", ");
 
   // TODO:
   // - fields.addAttachment (when attachments taken into account)
 
-  fields.forcePlainText = true;
-  fields.useMultipartAlternative = true;
-  fields.ConvertBodyToPlainText();
+  //fields.forcePlainText = true;
+  //fields.useMultipartAlternative = true;
+  //fields.ConvertBodyToPlainText();
 
   let params = Cc["@mozilla.org/messengercompose/composeparams;1"]
                   .createInstance(Ci.nsIMsgComposeParams);
@@ -97,6 +97,9 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
                             .getService(Ci.nsIMsgAccountManager);
 
   let compose = msgComposeService.InitCompose (null, params);
+  compose.composeHTML = true;
+  Log.debug("composeHTML", compose.composeHTML);
+  compose.SendMsg (4, msgAccountManager.defaultAccount.defaultIdentity, "", null, null); return;
   compose.SendMsg (Ci.nsIMsgCompDeliverMode.Now,
                    msgAccountManager.defaultAccount.defaultIdentity,
                    "", null, null);
