@@ -28,6 +28,7 @@ function onShowAdvancedFields() {
 
 function onSendMsg() {
   let body = CKEDITOR.instances.editor.getData();
+  let iframe = document.getElementsByTagName("iframe")[0];
   // We're Thunderbird, so make sure we send 1999-style HTML!
   body = 
     "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"+
@@ -39,7 +40,8 @@ function onSendMsg() {
     "  <body bgcolor=\"#ffffff\" text=\"#000000\">\n"+
     "    "+body+"\n"+
     "  </body>\n"+
-    "</html>";
+    "</html>\n";
+  // Never, EVER, forget the trailing newline. I mean it, man.
 
   Log.debug(
       "identity", gIdentities[$("#from").val()],
@@ -49,7 +51,6 @@ function onSendMsg() {
       "bcc", $("#bcc").val(),
       "subject", $("#subject").val(),
       "body", body);
-  //return;
   sendMessage(
     {
       identity: gIdentities[$("#from").val()],
@@ -58,7 +59,7 @@ function onSendMsg() {
       bcc: $("#bcc").val(),
       subject: $("#subject").val(),
       body: body,
-    }, data, {
+    }, data, iframe, {
       onSuccess: null,
       onFailure: null,
     });
@@ -74,10 +75,11 @@ function setupIdentities() {
     let selected = (id == wantedId) ? "selected" : "";
     $select.append($("<option></option>")
       .attr("selected", selected)
-      .attr("value", i++)
+      .attr("value", i)
       .text(id.fullName + " <"+id.email+">")
     );
-    gIdentities.push(id);
+    gIdentities[i] = id;
+    i++;
   }
 }
 
@@ -179,6 +181,8 @@ function peopleAutocomplete(query, callback) {
       dumpCallStack(e);
     }
   });
+  if (!results.length)
+    results.push(asToken(null, query, query, null));
   callback(results);
 }
 

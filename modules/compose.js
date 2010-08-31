@@ -39,11 +39,50 @@ function range(begin, end) {
   }
 }
 
+function FakeEditor (aIframe) {
+  this.iframe = aIframe;
+}
+
+FakeEditor.prototype = {
+  getEmbeddedObjects: function _FakeEditor_getEmbeddedObjects () {
+    try {
+      let objects = Cc["@mozilla.org/supports-array;1"]
+                      .createInstance(Ci.nsISupportsArray);
+      for each (let [, o] in Iterator(this.iframe.contentDocument.getElementsByTagName("img")))
+        objects.AppendElement(o, false);
+      return objects;
+    } catch (e) {
+      Log.error(e);
+      dumpCallStack(e);
+    }
+  },
+
+  outputToString: function _FakeEditor_outputToString (formatType, flags) {
+    Log.debug("outputToString");
+    let r =
+      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"+
+      "<html>\n"+
+      "  <head>\n"+
+      "    <meta http-equiv=\"content-type\" content=\"text/html;\n"+
+      "      charset=ISO-8859-1\">\n"+
+      "  </head>\n"+
+      "  <body bgcolor=\"#ffffff\" text=\"#000000\">\n"+
+      "    "+this.iframe.contentDocument.body.innerHTML+"\n"+
+      "  </body>\n"+
+      "</html>\n"
+    ;
+    return r;
+  },
+
+  QueryInterface: XPCOMUtils.generateQI([Ci.nsISupports, Ci.nsIEditor, Ci.nsIEditorMailSupport]),
+}
+
 /**
  * Actually send the message based on the given parameters.
  */
 function sendMessage({ identity, to, cc, bcc, subject, body },
     { url, msgHdr, originalUrl, type, format, msgWindow, KomposeManager },
+    aIframe,
     { onSuccess, onFailure }) {
   let fields = Cc["@mozilla.org/messengercompose/composefields;1"]
                   .createInstance(Ci.nsIMsgCompFields);
@@ -97,12 +136,18 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
                             .getService(Ci.nsIMsgAccountManager);
 
   let compose = msgComposeService.InitCompose (null, params);
+  let fakeEditor = new FakeEditor(aIframe, body);
+  // We did use HTML actually!
   compose.composeHTML = true;
-  Log.debug("composeHTML", compose.composeHTML);
-  compose.SendMsg (4, msgAccountManager.defaultAccount.defaultIdentity, "", null, null); return;
-  compose.SendMsg (Ci.nsIMsgCompDeliverMode.Now,
-                   msgAccountManager.defaultAccount.defaultIdentity,
-                   "", null, null);
+  compose.editor = fakeEditor;
+  // Uncomment the line below to NOT send the message and save a draft instead
+  // compose.SendMsg (4, identity, "", null, null); return;
+  try {
+    compose.SendMsg (Ci.nsIMsgCompDeliverMode.Now, identity, "", null, null);
+  } catch (e) {
+    Log.error(e);
+    dumpCallStack(e);
+  }
   return true;
 }
 
