@@ -8,7 +8,11 @@ Cu.import("resource:///modules/iteratorUtils.jsm"); // for fixIterator
 Cu.import("resource:///modules/XPCOMUtils.jsm"); // for generateQI
 Cu.import("resource://kompose/compose.js");
 Cu.import("resource://kompose/log.js");
-Cu.import("resource://people/modules/people.js");
+try {
+  Cu.import("resource://people/modules/people.js");
+} catch (e) {
+  // Need... kill... user...
+}
 
 const msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
                             .QueryInterface(Ci.nsIMsgComposeService);
@@ -21,7 +25,10 @@ const mCompType = Ci.nsIMsgCompType;
 Log.debug("Kompose loaded", data.url, data.msgHdr, data.originalUrl, data.type,
   data.format, data.identity, data.msgWindow, data.KomposeManager);
 
+let KomposeManager = data.KomposeManager;
+
 function onShowAdvancedFields() {
+  // XXX this probably isn't used anymore, duh
   $("#cc").closest("tr").fadeIn("slow");
   $("#bcc").closest("tr").fadeIn("slow");
   $("#moar").closest("td").fadeOut("slow");
@@ -54,7 +61,11 @@ function onSendMsg() {
       bcc: $("#bcc").val(),
       subject: $("#subject").val(),
       body: body,
-    }, data, iframe, progressListener);
+    }, data, iframe,
+    {
+      progressListener: progressListener,
+      sendListener: sendListener
+    });
 }
 
 let gIdentities = [];
@@ -263,60 +274,137 @@ function pText (t) {
 
 // all progress notifications are done through the nsIWebProgressListener implementation...
 let progressListener = {
-    onStateChange: function (aWebProgress, aRequest, aStateFlags, aStatus)
-    {
-      Log.debug("onStateChange", aWebProgress, aRequest, aStateFlags, aStatus);
-      if (aStateFlags & Ci.nsIWebProgressListener.STATE_START) {
-        pUndetermined();
-        $("#progress").dialog('open');
-      }
+  onStateChange: function (aWebProgress, aRequest, aStateFlags, aStatus) {
+    Log.debug("onStateChange", aWebProgress, aRequest, aStateFlags, aStatus);
+    if (aStateFlags & Ci.nsIWebProgressListener.STATE_START) {
+      pUndetermined();
+      $("#progress").dialog('open');
+    }
 
-      if (aStateFlags & Ci.nsIWebProgressListener.STATE_STOP) {
-        pValue(0);
-        pText('');
-        $("#progress").dialog('close');
-      }
-    },
+    if (aStateFlags & Ci.nsIWebProgressListener.STATE_STOP) {
+      pValue(0);
+      pText('');
+      $("#progress").dialog('close');
+    }
+  },
 
-    onProgressChange: function(aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress)
-    {
-      Log.debug("onProgressChange", aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress);
-      // Calculate percentage.
-      var percent;
-      if ( aMaxTotalProgress > 0 ) {
-        percent = Math.round( (aCurTotalProgress*100)/aMaxTotalProgress );
-        if ( percent > 100 )
-          percent = 100;
+  onProgressChange: function(aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress) {
+    Log.debug("onProgressChange", aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress);
+    // Calculate percentage.
+    var percent;
+    if (aMaxTotalProgress > 0) {
+      percent = Math.round( (aCurTotalProgress*100)/aMaxTotalProgress );
+      if (percent > 100)
+        percent = 100;
 
-        // Advance progress meter.
-        pValue(percent);
-      } else {
-        // Progress meter should be barber-pole in this case.
-        pUndetermined();
-      }
-    },
+      // Advance progress meter.
+      pValue(percent);
+    } else {
+      // Progress meter should be barber-pole in this case.
+      pUndetermined();
+    }
+  },
 
-    onLocationChange: function(aWebProgress, aRequest, aLocation)
-    {
-      // we can ignore this notification
-    },
+  onLocationChange: function(aWebProgress, aRequest, aLocation) {
+    // we can ignore this notification
+  },
 
-    onStatusChange: function(aWebProgress, aRequest, aStatus, aMessage)
-    {
-      pText(aMessage);
-    },
+  onStatusChange: function(aWebProgress, aRequest, aStatus, aMessage) {
+    pText(aMessage);
+  },
 
-    onSecurityChange: function(aWebProgress, aRequest, state)
-    {
-      // we can ignore this notification
-    },
+  onSecurityChange: function(aWebProgress, aRequest, state) {
+    // we can ignore this notification
+  },
 
-    QueryInterface: XPCOMUtils.generateQI([
-      Ci.nsIWebProgressListener,
-      Ci.nsISupportsWeakReference,
-      Ci.nsISupports
-    ]),
+  QueryInterface: XPCOMUtils.generateQI([
+    Ci.nsIWebProgressListener,
+    Ci.nsISupportsWeakReference,
+    Ci.nsISupports
+  ]),
 };
+
+function closeTab() {
+  window.top.document.getElementById("tabmail").closeTab(data.tabObject);
+}
+
+let sendListener = {
+  /**
+   * Notify the observer that the message has started to be delivered. This method is
+   * called only once, at the beginning of a message send operation.
+   *
+   * @return The return value is currently ignored.  In the future it may be
+   * used to cancel the URL load..
+   */
+  onStartSending: function (aMsgID, aMsgSize) {
+  },
+
+  /**
+   * Notify the observer that progress as occurred for the message send
+   */
+  onProgress: function (aMsgID, aProgress, aProgressMax) {
+  },
+
+  /**
+   * Notify the observer with a status message for the message send
+   */
+  onStatus: function (aMsgID, aMsg) {
+  },
+
+  /**
+   * Notify the observer that the message has been sent.  This method is 
+   * called once when the networking library has finished processing the 
+   * message.
+   * 
+   * This method is called regardless of whether the the operation was successful.
+   * aMsgID   The message id for the mail message
+   * status   Status code for the message send.
+   * msg      A text string describing the error.
+   * returnFileSpec The returned file spec for save to file operations.
+   */
+  onStopSending: function (aMsgID, aStatus, aMsg, aReturnFile) {
+    // if (aExitCode == NS_ERROR_SMTP_SEND_FAILED_UNKNOWN_SERVER ||
+    //     aExitCode == NS_ERROR_SMTP_SEND_FAILED_UNKNOWN_REASON ||
+    //     aExitCode == NS_ERROR_SMTP_SEND_FAILED_REFUSED ||
+    //     aExitCode == NS_ERROR_SMTP_SEND_FAILED_INTERRUPTED ||
+    //     aExitCode == NS_ERROR_SMTP_SEND_FAILED_TIMEOUT ||
+    //     aExitCode == NS_ERROR_SMTP_PASSWORD_UNDEFINED ||
+    //     aExitCode == NS_ERROR_SMTP_AUTH_FAILURE ||
+    //     aExitCode == NS_ERROR_SMTP_AUTH_GSSAPI ||
+    //     aExitCode == NS_ERROR_SMTP_AUTH_MECH_NOT_SUPPORTED ||
+    //     aExitCode == NS_ERROR_SMTP_AUTH_NOT_SUPPORTED ||
+    //     aExitCode == NS_ERROR_SMTP_AUTH_CHANGE_ENCRYPT_TO_PLAIN_NO_SSL ||
+    //     aExitCode == NS_ERROR_SMTP_AUTH_CHANGE_ENCRYPT_TO_PLAIN_SSL ||
+    //     aExitCode == NS_ERROR_SMTP_AUTH_CHANGE_PLAIN_TO_ENCRYPT ||
+    //     aExitCode == NS_ERROR_STARTTLS_FAILED_EHLO_STARTTLS)
+    //
+    // Moar in mailnews/compose/src/nsComposeStrings.h
+    Log.debug("onStopSending", aMsgID, aStatus, aMsg, aReturnFile);
+    if (aStatus & 0x80000000)
+      Log.debug("!NS_SUCCEEDED sending");
+    else
+      closeTab();
+  },
+
+  /**
+   * Notify the observer with the folder uri before the draft is copied.
+   */
+  onGetDraftFolderURI: function (aFolderURI) {
+  },
+
+  /**
+   * Notify the observer when the user aborts the send without actually doing the send
+   * eg : by closing the compose window without Send.
+   */
+  onSendNotPerformed: function (aMsgID, aStatus) {
+  },
+
+  QueryInterface: XPCOMUtils.generateQI([
+    Ci.nsIMsgSendListener,
+    Ci.nsISupportsWeakReference,
+    Ci.nsISupports
+  ]),
+}
 
 function setupProgressDialog() {
   $("#progress").dialog({

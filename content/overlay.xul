@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-<?xml-stylesheet href="chrome://composeersation/skin/overlay.css" type="text/css" ?>
 <!-- ***** BEGIN LICENSE BLOCK *****
    - Version: MPL 1.1/GPL 2.0/LGPL 2.1
    -
@@ -37,5 +36,5 @@
    - ***** END LICENSE BLOCK ***** -->
 
 <overlay id="messengerWindow" xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-  <script type="application/x-javascript" src="overlay.js" />
+  <script type="application/x-javascript" src="chrome://kompose/content/overlay.js" />
 </overlay>

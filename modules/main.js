@@ -72,6 +72,7 @@ KomposeManager.prototype = {
       browser.setAttribute("id", "composeTab-" + this.lastId);
       browser.setAttribute("onclick", "specialTabs.defaultClickHandler(event);");
       browser.data = aArgs;
+      browser.data.tabObject = aTab;
 
       // Done.
       aTab.panel.appendChild(browser);

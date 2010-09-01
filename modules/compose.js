@@ -68,7 +68,7 @@ FakeEditor.prototype = {
       "  <body bgcolor=\"#ffffff\" text=\"#000000\">\n"+
       "    "+this.iframe.contentDocument.body.innerHTML+"\n"+
       "  </body>\n"+
-      "</html>"
+      "</html>\n"
     ;
     return r;
   },
@@ -81,7 +81,7 @@ FakeEditor.prototype = {
  */
 function sendMessage({ identity, to, cc, bcc, subject, body },
     { url, msgHdr, originalUrl, type, format, msgWindow, KomposeManager },
-    aIframe, progressListener) {
+    aIframe, { progressListener, sendListener }) {
 
   // Here is the part where we do all the stuff related to filling proper
   //  headers, adding references, making sure all the composition fields are
@@ -135,6 +135,7 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
   params.identity = identity;
   params.type = Ci.nsIMsgCompType.New;
   params.format = Ci.nsIMsgCompFormat.Default;
+  params.sendListener = sendListener;
 
   // This part initializes a nsIMsgCompose instance. This is useless, because
   //  that component is supposed to talk to the "real" compose window, set the
@@ -143,10 +144,10 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
   let msgAccountManager = Cc["@mozilla.org/messenger/account-manager;1"]
                             .getService(Ci.nsIMsgAccountManager);
 
-  let compose = msgComposeService.InitCompose (null, params);
+  let msgCompose = msgComposeService.InitCompose (null, params);
   let fakeEditor = new FakeEditor(aIframe, body);
-  compose.composeHTML = true;
-  compose.editor = fakeEditor;
+  msgCompose.composeHTML = true;
+  msgCompose.editor = fakeEditor;
 
   // We create a progress listener...
   var progress = Cc["@mozilla.org/messenger/progress;1"]
@@ -154,9 +155,10 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
   if (progress) {
     progress.registerListener(progressListener);
   }
+  //msgCompose.RegisterStateListener(stateListener);
 
   try {
-    compose.SendMsg (Ci.nsIMsgCompDeliverMode.Now, identity, "", null, progress);
+    msgCompose.SendMsg (Ci.nsIMsgCompDeliverMode.Now, identity, "", null, progress);
   } catch (e) {
     Log.error(e);
     dumpCallStack(e);
