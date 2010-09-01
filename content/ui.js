@@ -68,6 +68,14 @@ function onSendMsg() {
     });
 }
 
+$(window).keydown(function (event) {
+  if (event.metaKey && event.which == 13) {
+    Log.debug("Triggered the keyboard shortcut, sending...");
+    onSendMsg();
+    return false; // otherwise it gets fired twice
+  }
+});
+
 let gIdentities = [];
 
 function setupIdentities() {
