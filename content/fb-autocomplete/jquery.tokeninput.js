@@ -441,6 +441,7 @@ $.TokenList = function (input, settings) {
     }
 
     function show_dropdown_hint () {
+      // XXX
       return;
         dropdown
             .html("<p>"+settings.hintText+"</p>")
@@ -455,6 +456,15 @@ $.TokenList = function (input, settings) {
     // Populate the results dropdown with some results
     function populate_dropdown (query, results) {
         if(results.length) {
+            // If we don't have focus...
+            if (input_box[0] != document.activeElement) {
+              // ... pick the first result
+              var fst = results[0];
+              insert_token(fst.id, fst.name, fst);
+              input_box.val("");
+              return;
+            }
+
             dropdown.empty();
             var dropdown_ul = $("<ul>")
                 .appendTo(dropdown)

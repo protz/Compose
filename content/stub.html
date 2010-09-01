@@ -9,6 +9,7 @@
   <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
   <script type="text/javascript" src="fb-autocomplete/jquery.tokeninput.js"></script>
   <script type="text/javascript" src="ckeditor/ckeditor_source.js"></script>
+  <script type="text/javascript" src="ckeditor/adapters/jquery.js"></script>
   <script type="application/javascript;version=1.8" src="ui.js"></script>
   <script type="text/javascript"> //center div vertically and horizontally
     jQuery(function(){
@@ -72,7 +73,7 @@
     </div>
     
     <div class="rightColumn">
-      <textarea class="attachments">
+      <textarea class="attachments" tabindex="-1">
       </textarea>
       <div class="attachmentActions">
         <button tabindex="-1" class="attach">attach </button><button tabindex="-1">remove</button>

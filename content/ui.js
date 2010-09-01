@@ -130,8 +130,8 @@ function setupReply(prePopulateData) {
       document.getElementById("secret"),
       function (aHtml) {
         document.getElementById("editor").textContent =
-          "<p></p><blockquote type='cite'>"+aHtml+"</blockquote>";
-        CKEDITOR.replace("editor");
+          "<p><span id='startMarker'></span></p><blockquote type='cite'>"+aHtml+"</blockquote>";
+        replaceEditor();
       }
     );
   } catch (e) {
@@ -214,6 +214,15 @@ function setupAutocomplete(prePopulateData) {
   });
 }
 
+function replaceEditor() {
+  $("#editor").ckeditor(function _on_ckeditor_ready() {
+    return;
+    // Try to move the caret BEFORE the quoted text...
+    let p = self.document.getElementsByTag("p")[0];
+    self.getSelection().selectElement(p);
+  });
+}
+
 function setupEditor() {
   try {
     Log.debug("data.type is", data.type);
@@ -222,7 +231,7 @@ function setupEditor() {
     let prePopulateData = { to: null, cc: null, bcc: null };
     switch (data.type) {
       case mCompType.New:
-        CKEDITOR.replace("editor");
+        replaceEditor();
         break;
 
       case mCompType.Reply:
