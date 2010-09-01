@@ -1,58 +1,168 @@
-html {
-  height: 100%;
-  min-height: 100%;
-  width: 100%;
-  min-width: 100%;
-}
-
-body {
-  height: 100%;
-  width: 100%;
+* {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-button::-moz-focus-inner { border: 0; }
+body {
+  background-color: #ededed;
+  font-family: "Lucida Grande";
+  font-size: 14px;
+}
 
-button {
-  background-image: -moz-linear-gradient(top, #fefefe 0%, #d5d5d5 100%);
-  border: 1px solid #919191;
-  -moz-box-shadow: 0 1px 0 rgba(255,255,255,0.55);
-  -moz-border-radius: 3px;
-  text-align: center;
-  outline: none;
-  height: 22px;
+button::-moz-focus-inner { 
+  border: 0; 
+}
+
+button:hover {
   cursor: pointer;
 }
 
 button:active {
-  background-image: none;
-  background-color: #d5d5d5;
-  -moz-box-shadow: inset 0 0 2px #666;
-  border: 1px solid #666;
+  -moz-box-shadow: inset 0 0 2px rgba(0,0,0,0.25);
 }
 
-button img {
-  vertical-align: middle;
+#headerWrapper {
+  border-bottom: 1px solid #ddd;
+  background-color: #ededed;
 }
 
-.field {
-  width: 400px;
+.leftColumn,
+.rightColumn {
+  display: inline-block;
+  float: left;
+  position: relative;
+  padding: 10px 10px 8px 10px;
 }
 
-#toolbar {
-  margin: 1em 0;
+.leftColumn {
+  width: 75%;
+  border-right: 1px solid #ddd;
 }
 
-#moar {
-  font-size: 10px;
-  text-decoration: none;
+.rightColumn {
+  width: 25%;
 }
 
-#fields td:first-child {
-  font-variant: small-caps;
-  font-weight: bold;
-  padding-right: 1em;
+.leftColumn ul li.form {
+  width: 100%;
+  margin: 0 0 5px 0;
+}
+
+.leftColumn ul li.form:last-child {
+  margin: 0;
+} 
+
+.sendInfo {
+  list-style-type: none;
+  margin: 0 10px 0 0;
+  width: 80px;
+  float: left;
+  height: 24px;
+}
+
+.sendInfo span.from,
+.sendInfo span.to,
+.sendInfo span.subject {
+  text-align: right;
+  font-size: 11px;
+  background-color: #fafafa;
+  display: block;
+  padding: 3px 12px 3px 3px;
+  -moz-border-radius: 10px;
+  color: #333;
+  background-image: -moz-linear-gradient(top,#fff 0%,#f2f2f2 100%);
+  border: 1px solid #ddd;
+}
+
+.inputs {
+  height: 24px;
+}
+
+.inputs .token-input-list-facebook, #subject {
+  -moz-box-shadow: 0 1px 2px #ddd inset;
+  background-color: #fff;
+  font-family: "Lucida Grande";
+  font-size: 11px;
+  border: 1px solid #aaa;
+  padding: 3px;
+  width: 100%;
+}
+
+.inputs select {
+  width: 100%;
+  margin: 0 0 3px;
+}
+
+input {
+  min-width: 200px;
+}
+
+textarea.attachments {
+  width: 100%;
+  position: relative;
+  border: 1px solid #aaa;
+  padding: 3px;
+  font-family: "lucida grande";
+  font-size: 11px;
+}
+
+.attachmentActions {
+  position: absolute;
+  bottom: 10px;
+  left: 11px;
+  height: 24px;
+  background-color: #fafafa;
+  font-size: 11px;
+  padding: 0px;
+  border-top: 1px solid #ddd;
+}
+
+.attachmentActions button {
+  height: 24px;
+  border: none;
+  border-right: 1px solid #ddd;
+  background-color: #fff;
+  background-image: -moz-linear-gradient(top, #fff 0%, #fff 50%, #f2f2f2 50%,#f2f2f2 100%);
+  padding: 0 5px;
+  margin: 0;
+}
+
+.attachmentActions button.attach {
+  background: url(chrome://kompose/skin/i/attachment.png) no-repeat 4px 4px,
+              -moz-linear-gradient(top, #fff 0%, #fff 50%, #f2f2f2 50%,#f2f2f2 100%);
+  padding-left: 24px;
+}
+
+#sendWrapper {
+  height: 24px;
+  width: 100%;
+  border-bottom: 1px solid #ddd;
+  padding: 0 10px;
+  margin: -1px 0 0 0;
+}
+
+#sendWrapper button {
+  height: 24px;
+  border: none;
+  border-top: 1px solid #aaa;
+  border-bottom: 1px solid #aaa;
+  border-right: 1px solid #aaa;
+  background-color: #fff;
+  background-image: -moz-linear-gradient(top, #fff 0%, #fff 50%, #f2f2f2 50%,#f2f2f2 100%);
+  padding: 0 5px;
+  float: left;
+}
+
+#sendWrapper button:first-child {
+  border-left: 1px solid #aaa;
+  border-right: 1px solid #aaa;
+}
+
+#sendWrapper button:last-child {
+  border-left: none;
+  border-right: 1px solid #aaa;
 }
 
 .autocomplete-thumb {
@@ -62,6 +172,19 @@ button img {
 
 /* Make sure we take all available height */
 
+html {
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+body {
+  width: 100%;
+  height: 100%;
+}
+  
+
 body,
 #wrapper, #editorWrapper, #cke_editor, .cke_browser_gecko, 
 .cke_wrapper,
@@ -69,16 +192,143 @@ body,
 .cke_editor > tbody,
 .cke_editor > tbody > tr:nth-child(2),
 .cke_editor > tbody > tr:nth-child(2) > td,
-.cke_editor > tbody > tr:nth-child(2) > td > iframe {
+.cke_editor > tbody > tr:nth-child(2) > td > iframe,
+.cke_editor > tbody > tr:nth-child(2) > td > textarea {
   display: -moz-box !important;
   -moz-box-orient: vertical;
   -moz-box-flex: 1;
 }  
 
-#wrapper {
-  padding: 7px;
+.cke_editor_editor {
+  border-width: 0 !important;
 }
 
 .cke_resizer {
   display: none !important;
 }
+
+/* START hbox/vbox normalization from http://alex.dojotoolkit.org/2009/08/css-3-progress/ */
+/* hbox and vbox classes */
+ 
+.hbox {
+	display: -webkit-box;
+	-webkit-box-orient: horizontal;
+	-webkit-box-align: stretch;
+ 
+	display: -moz-box;
+	-moz-box-orient: horizontal;
+	-moz-box-align: stretch;
+ 
+	display: box;
+	box-orient: horizontal;
+	box-align: stretch;
+}
+ 
+.hbox > * {
+	-webkit-box-flex: 0;
+	-moz-box-flex: 0;
+	box-flex: 0;
+	display: block;
+}
+ 
+.vbox {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-box-align: stretch;
+ 
+	display: -moz-box;
+	-moz-box-orient: vertical;
+	-moz-box-align: stretch;
+ 
+	display: box;
+	box-orient: vertical;
+	box-align: stretch;
+}
+ 
+.vbox > * {
+	-webkit-box-flex: 0;
+	-moz-box-flex: 0;
+	box-flex: 0;
+	display: block;
+}
+ 
+.spacer {
+	-webkit-box-flex: 1;
+	-moz-box-flex: 1;
+	box-flex: 1;
+}
+ 
+.reverse {
+	-webkit-box-direction: reverse;
+	-moz-box-direction: reverse;
+	box-direction: reverse;
+}
+ 
+.boxFlex0 {
+	-webkit-box-flex: 0;
+	-moz-box-flex: 0;
+	box-flex: 0;
+}
+ 
+.boxFlex1, .boxFlex {
+	-webkit-box-flex: 1;
+	-moz-box-flex: 1;
+	box-flex: 1;
+}
+ 
+.boxFlex2 {
+	-webkit-box-flex: 2;
+	-moz-box-flex: 2;
+	box-flex: 2;
+}
+ 
+.boxGroup1 {
+	-webkit-box-flex-group: 1;
+	-moz-box-flex-group: 1;
+	box-flex-group: 1;
+}
+ 
+.boxGroup2 {
+	-webkit-box-flex-group: 2;
+	-moz-box-flex-group: 2;
+	box-flex-group: 2;
+}
+ 
+.start {
+	-webkit-box-pack: start;
+	-moz-box-pack: start;
+	box-pack: start;
+}
+ 
+.end {
+	-webkit-box-pack: end;
+	-moz-box-pack: end;
+	box-pack: end;
+}
+ 
+.center {
+	-webkit-box-pack: center;
+	-moz-box-pack: center;
+	box-pack: center;
+}
+/* END hbox/vbox normalization from http://alex.dojotoolkit.org/2009/08/css-3-progress/ */
+
+/* clearfix */
+
+.clearfix:after {
+	content: ".";
+	display: block;
+	clear: both;
+	visibility: hidden;
+	line-height: 0;
+	height: 0;
+}
+ 
+html[xmlns] .clearfix {
+	display: block;
+}
+ 
+* html .clearfix {
+	height: 1%;
+}
+

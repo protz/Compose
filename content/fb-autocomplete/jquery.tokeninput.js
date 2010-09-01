@@ -441,6 +441,7 @@ $.TokenList = function (input, settings) {
     }
 
     function show_dropdown_hint () {
+      return;
         dropdown
             .html("<p>"+settings.hintText+"</p>")
             .show();
