@@ -5,6 +5,7 @@ let Cr = Components.results;
 let data = window.frameElement.data;
 
 Cu.import("resource:///modules/iteratorUtils.jsm"); // for fixIterator
+Cu.import("resource:///modules/XPCOMUtils.jsm"); // for generateQI
 Cu.import("resource://kompose/compose.js");
 Cu.import("resource://kompose/log.js");
 Cu.import("resource://people/modules/people.js");
@@ -17,7 +18,7 @@ const msgAccountManager = Cc["@mozilla.org/messenger/account-manager;1"]
                             .getService(Ci.nsIMsgAccountManager);
 const mCompType = Ci.nsIMsgCompType;
 
-Log.debug(data.url, data.msgHdr, data.originalUrl, data.type,
+Log.debug("Kompose loaded", data.url, data.msgHdr, data.originalUrl, data.type,
   data.format, data.identity, data.msgWindow, data.KomposeManager);
 
 function onShowAdvancedFields() {
@@ -43,14 +44,8 @@ function onSendMsg() {
     "</html>\n";
   // Never, EVER, forget the trailing newline. I mean it, man.
 
-  Log.debug(
-      "identity", gIdentities[$("#from").val()],
-      "from", $("#from").val(),
-      "to", $("#to").val(),
-      "cc", $("#cc").val(),
-      "bcc", $("#bcc").val(),
-      "subject", $("#subject").val(),
-      "body", body);
+  // XXX is it even useful to pass the body at that point? We're overriding
+  // m_composeHTML anyway, which means nsMsgSend gets the body from the editor.
   sendMessage(
     {
       identity: gIdentities[$("#from").val()],
@@ -59,10 +54,7 @@ function onSendMsg() {
       bcc: $("#bcc").val(),
       subject: $("#subject").val(),
       body: body,
-    }, data, iframe, {
-      onSuccess: null,
-      onFailure: null,
-    });
+    }, data, iframe, progressListener);
 }
 
 let gIdentities = [];
@@ -104,7 +96,6 @@ function setupReply(prePopulateData) {
   let isReplyToOwnMsg = false;
   for each (let [i, identity] in Iterator(gIdentities)) {
     let email = identity.email;
-    Log.debug(email, authorEmailAddress);
     if (email == authorEmailAddress)
       isReplyToOwnMsg = true;
     if (recipientsEmailAddresses.filter(function (x) x == email).length)
@@ -141,7 +132,6 @@ function setupReply(prePopulateData) {
 }
 
 function asToken(thumb, name, email, guid) {
-  Log.debug(thumb, name, email, guid);
   let hasName = name && (String.trim(name).length > 0);
   let data = hasName ? name + " <" + email + ">" : email;
   let thumbStr = thumb ? "<img class='autocomplete-thumb' src=\""+thumb+"\" /> " : "";
@@ -156,35 +146,32 @@ function peopleAutocomplete(query, callback) {
   let results = [];
   let dupCheck = {};
   let add = function(person) {
-    // Might not have an email for some reason... ?
-    try {
-      let photos = person.getProperty("photos");
-      let thumb;
-      for each (let photo in photos) {
-        if (photo.type == "thumbnail") {
-          thumb = photo.value;
-          break;
-        }
+    let photos = person.getProperty("photos");
+    let thumb;
+    for each (let photo in photos) {
+      if (photo.type == "thumbnail") {
+        thumb = photo.value;
+        break;
       }
+    }
 
-      let suggestions = person.getProperty("emails");
-
-      for each (let suggestion in suggestions)
-      {
-        if (dupCheck[suggestion.value])
-          continue;
-        dupCheck[suggestion.value] = 1;
-
-        results.push(asToken(thumb, person.displayName, suggestion.value, person.guid));
-      }
-    } catch(e) {
-      Log.error(e);
-      dumpCallStack(e);
+    let suggestions = person.getProperty("emails");
+    for each (let suggestion in suggestions)
+    {
+      if (dupCheck[suggestion.value])
+        continue;
+      dupCheck[suggestion.value] = 1;
+      results.push(asToken(thumb, person.displayName, suggestion.value, person.guid));
     }
   };
-  // Contacts doesn't seem to allow a OR, so run two queries... (longer)
-  People.find({ displayName: query }).forEach(add);
-  People.find({ emails: query }).forEach(add);
+  try {
+    // Contacts doesn't seem to allow a OR, so run two queries... (longer)
+    People.find({ displayName: query }).forEach(add);
+    People.find({ emails: query }).forEach(add);
+  } catch(e) {
+    Log.error(e);
+    dumpCallStack(e);
+  }
   if (!results.length)
     results.push(asToken(null, null, query, query));
   callback(results);
@@ -229,7 +216,6 @@ function replaceEditor() {
 
 function setupEditor() {
   try {
-    Log.debug("data.type is", data.type);
     setupIdentities();
 
     let prePopulateData = { to: null, cc: null, bcc: null };
@@ -249,11 +235,96 @@ function setupEditor() {
         break;
     }
     setupAutocomplete(prePopulateData);
+    setupProgressDialog();
     $("#to").focus();
   } catch (e) {
     Log.error(e);
     dumpCallStack(e);
   }
+}
+
+function pValue (v) {
+  $("#progressBar")
+    .progressbar("value", v)
+    .find(".ui-progressbar-value")
+    .css("background-image", "none");
+}
+
+function pUndetermined () {
+  $("#progressBar")
+    .progressbar("value", 100)
+    .find(".ui-progressbar-value")
+    .css("background-image", "url(chrome://kompose/content/jquery-ui/css/ui-lightness/images/pbar-ani.gif)");
+}
+
+function pText (t) {
+  $("#progressText").text(t);
+}
+
+// all progress notifications are done through the nsIWebProgressListener implementation...
+let progressListener = {
+    onStateChange: function (aWebProgress, aRequest, aStateFlags, aStatus)
+    {
+      Log.debug("onStateChange", aWebProgress, aRequest, aStateFlags, aStatus);
+      if (aStateFlags & Ci.nsIWebProgressListener.STATE_START) {
+        pUndetermined();
+        $("#progress").dialog('open');
+      }
+
+      if (aStateFlags & Ci.nsIWebProgressListener.STATE_STOP) {
+        pValue(0);
+        pText('');
+        $("#progress").dialog('close');
+      }
+    },
+
+    onProgressChange: function(aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress)
+    {
+      Log.debug("onProgressChange", aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress);
+      // Calculate percentage.
+      var percent;
+      if ( aMaxTotalProgress > 0 ) {
+        percent = Math.round( (aCurTotalProgress*100)/aMaxTotalProgress );
+        if ( percent > 100 )
+          percent = 100;
+
+        // Advance progress meter.
+        pValue(percent);
+      } else {
+        // Progress meter should be barber-pole in this case.
+        pUndetermined();
+      }
+    },
+
+    onLocationChange: function(aWebProgress, aRequest, aLocation)
+    {
+      // we can ignore this notification
+    },
+
+    onStatusChange: function(aWebProgress, aRequest, aStatus, aMessage)
+    {
+      pText(aMessage);
+    },
+
+    onSecurityChange: function(aWebProgress, aRequest, state)
+    {
+      // we can ignore this notification
+    },
+
+    QueryInterface: XPCOMUtils.generateQI([
+      Ci.nsIWebProgressListener,
+      Ci.nsISupportsWeakReference,
+      Ci.nsISupports
+    ]),
+};
+
+function setupProgressDialog() {
+  $("#progress").dialog({
+    autoOpen: false,
+    title: "Sending message...",
+    minHeight: 10,
+  });
+  $("#progressBar").progressbar();
 }
 
 window.addEventListener("load", setupEditor, false);

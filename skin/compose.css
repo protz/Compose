@@ -7,7 +7,7 @@
 
 body {
   background-color: #ededed;
-  font-family: "Lucida Grande";
+  font-family: "Lucida Grande", sans-serif;
   font-size: 14px;
 }
 
@@ -165,9 +165,28 @@ textarea.attachments {
   border-right: 1px solid #aaa;
 }
 
+/* Small avatars in the autocomplete popup */
+
 .autocomplete-thumb {
   height: 22px;
   vertical-align: middle;
+}
+
+/* jquery-style progress dialog */
+.ui-dialog-titlebar {
+  font-size: 12px;
+  color: #333;
+  background-image: -moz-linear-gradient(top,#fff 0%,#f2f2f2 100%);
+  border: 1px solid #ddd;
+}
+
+#progress {
+  font-family: "Lucida Grande", sans-serif;
+  font-size: 10px;
+}
+
+#progressBar {
+  margin: .5em 0;
 }
 
 /* Make sure we take all available height */

@@ -58,7 +58,6 @@ FakeEditor.prototype = {
   },
 
   outputToString: function _FakeEditor_outputToString (formatType, flags) {
-    Log.debug("outputToString");
     let r =
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"+
       "<html>\n"+
@@ -69,7 +68,7 @@ FakeEditor.prototype = {
       "  <body bgcolor=\"#ffffff\" text=\"#000000\">\n"+
       "    "+this.iframe.contentDocument.body.innerHTML+"\n"+
       "  </body>\n"+
-      "</html>\n"
+      "</html>"
     ;
     return r;
   },
@@ -82,8 +81,11 @@ FakeEditor.prototype = {
  */
 function sendMessage({ identity, to, cc, bcc, subject, body },
     { url, msgHdr, originalUrl, type, format, msgWindow, KomposeManager },
-    aIframe,
-    { onSuccess, onFailure }) {
+    aIframe, progressListener) {
+
+  // Here is the part where we do all the stuff related to filling proper
+  //  headers, adding references, making sure all the composition fields are
+  //  properly set before assembling the message.
   let fields = Cc["@mozilla.org/messengercompose/composefields;1"]
                   .createInstance(Ci.nsIMsgCompFields);
   fields.from = identity.fullName + " <" + identity.email + ">";
@@ -125,6 +127,8 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
   //fields.useMultipartAlternative = true;
   //fields.ConvertBodyToPlainText();
 
+  // We probably want to change the format to be always HTML so that we don't
+  //  need to override m_composeHTML later on.
   let params = Cc["@mozilla.org/messengercompose/composeparams;1"]
                   .createInstance(Ci.nsIMsgComposeParams);
   params.composeFields = fields;
@@ -132,18 +136,27 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
   params.type = Ci.nsIMsgCompType.New;
   params.format = Ci.nsIMsgCompFormat.Default;
 
+  // This part initializes a nsIMsgCompose instance. This is useless, because
+  //  that component is supposed to talk to the "real" compose window, set the
+  //  encoding, set the composition mode... we're only doing that because we
+  //  can't send the message ourselves because of too many [noscript]s.
   let msgAccountManager = Cc["@mozilla.org/messenger/account-manager;1"]
                             .getService(Ci.nsIMsgAccountManager);
 
   let compose = msgComposeService.InitCompose (null, params);
   let fakeEditor = new FakeEditor(aIframe, body);
-  // We did use HTML actually!
   compose.composeHTML = true;
   compose.editor = fakeEditor;
-  // Uncomment the line below to NOT send the message and save a draft instead
-  // compose.SendMsg (4, identity, "", null, null); return;
+
+  // We create a progress listener...
+  var progress = Cc["@mozilla.org/messenger/progress;1"]
+                   .createInstance(Ci.nsIMsgProgress);
+  if (progress) {
+    progress.registerListener(progressListener);
+  }
+
   try {
-    compose.SendMsg (Ci.nsIMsgCompDeliverMode.Now, identity, "", null, null);
+    compose.SendMsg (Ci.nsIMsgCompDeliverMode.Now, identity, "", null, progress);
   } catch (e) {
     Log.error(e);
     dumpCallStack(e);
