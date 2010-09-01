@@ -154,7 +154,8 @@ function asToken(thumb, name, email, guid) {
 
 function peopleAutocomplete(query, callback) {
   let results = [];
-  People.find({ displayName: query }).forEach(function(person) {
+  let dupCheck = {};
+  let add = function(person) {
     // Might not have an email for some reason... ?
     try {
       let photos = person.getProperty("photos");
@@ -168,7 +169,6 @@ function peopleAutocomplete(query, callback) {
 
       let suggestions = person.getProperty("emails");
 
-      let dupCheck = {};
       for each (let suggestion in suggestions)
       {
         if (dupCheck[suggestion.value])
@@ -181,7 +181,10 @@ function peopleAutocomplete(query, callback) {
       Log.error(e);
       dumpCallStack(e);
     }
-  });
+  };
+  // Contacts doesn't seem to allow a OR, so run two queries... (longer)
+  People.find({ displayName: query }).forEach(add);
+  People.find({ emails: query }).forEach(add);
   if (!results.length)
     results.push(asToken(null, null, query, query));
   callback(results);
