@@ -456,15 +456,6 @@ $.TokenList = function (input, settings) {
     // Populate the results dropdown with some results
     function populate_dropdown (query, results) {
         if(results.length) {
-            // If we don't have focus...
-            if (input_box[0] != document.activeElement) {
-              // ... pick the first result
-              var fst = results[0];
-              insert_token(fst.id, fst.name, fst);
-              input_box.val("");
-              return;
-            }
-
             dropdown.empty();
             var dropdown_ul = $("<ul>")
                 .appendTo(dropdown)
@@ -494,6 +485,19 @@ $.TokenList = function (input, settings) {
 
                     $.data(this_li.get(0), "tokeninput", results[i]);
                 }
+            }
+
+            // If we don't have focus...
+            if (input_box[0] != document.activeElement) {
+              // ... pick the first result
+              var li_data = results[0];
+              insert_token(li_data.id, li_data.name, li_data);
+              input_box.val("");
+
+              var id_string = li_data.data + ","
+              hidden_input.val(hidden_input.val() + id_string);
+              token_count++;
+              return;
             }
 
             dropdown.show();

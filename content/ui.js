@@ -142,12 +142,13 @@ function setupReply(prePopulateData) {
 
 function asToken(thumb, name, email, guid) {
   Log.debug(thumb, name, email, guid);
-  let data = name + " <" + email + ">";
-  let listItem = thumb
-    ? "<img class='autocomplete-thumb' src=\""+thumb+"\" /> " + name + " &lt;" + email + "&gt;"
-    : name + " &lt;" + email + "&gt;";
+  let hasName = name && (String.trim(name).length > 0);
+  let data = hasName ? name + " <" + email + ">" : email;
+  let thumbStr = thumb ? "<img class='autocomplete-thumb' src=\""+thumb+"\" /> " : "";
+  let nameStr = hasName ? name + " &lt;" + email + "&gt;" : email;
+  let listItem = thumbStr + nameStr;
   let id = guid;
-  let displayName = String.trim(name).length ? name : email;
+  let displayName = hasName ? name : email;
   return { name: displayName, listItem: listItem, data: data, id: guid }
 }
 
@@ -182,7 +183,7 @@ function peopleAutocomplete(query, callback) {
     }
   });
   if (!results.length)
-    results.push(asToken(null, query, query, null));
+    results.push(asToken(null, null, query, query));
   callback(results);
 }
 
