@@ -8,8 +8,10 @@ Cu.import("resource:///modules/iteratorUtils.jsm"); // for fixIterator
 Cu.import("resource:///modules/XPCOMUtils.jsm"); // for generateQI
 Cu.import("resource://kompose/compose.js");
 Cu.import("resource://kompose/log.js");
-Cu.import("resource://people/modules/people.js");
 Cu.import("resource://kompose/conv/MsgHdrUtils.jsm"); // for getMessageBody
+try {
+  Cu.import("resource://people/modules/people.js");
+} catch (e) { }
 
 const msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
                             .QueryInterface(Ci.nsIMsgComposeService);

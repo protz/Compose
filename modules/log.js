@@ -1,6 +1,7 @@
 var EXPORTED_SYMBOLS = ["Log", "dumpCallStack"]
 
-Components.utils.import("resource:///modules/gloda/log4moz.js");
+// Because my log4moz-fix isn't in 3.1... doh
+Components.utils.import("resource://kompose/log4moz.js");
 
 let Log;
 

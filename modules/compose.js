@@ -128,8 +128,7 @@ function sendMessage({ identity, to, cc, bcc, subject },
 
   let msgCompose = msgComposeService.InitCompose (null, params);
   let fakeEditor = new FakeEditor(aIframe);
-  msgCompose.composeHTML = true;
-  msgCompose.editor = fakeEditor;
+  msgCompose.initEditor(fakeEditor, aIframe.contentWindow);
 
   // We create a progress listener...
   var progress = Cc["@mozilla.org/messenger/progress;1"]
