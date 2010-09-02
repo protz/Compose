@@ -17,6 +17,9 @@ const gHeaderParser = Cc["@mozilla.org/messenger/headerparser;1"]
                         .getService(Ci.nsIMsgHeaderParser);
 const msgAccountManager = Cc["@mozilla.org/messenger/account-manager;1"]
                             .getService(Ci.nsIMsgAccountManager);
+const msgComposePrefs = Cc["@mozilla.org/preferences-service;1"]
+                          .getService(Ci.nsIPrefService)
+                          .getBranch("msgcompose.");
 const mCompType = Ci.nsIMsgCompType;
 
 let KomposeManager = data.KomposeManager;
@@ -26,31 +29,13 @@ Log.debug("Kompose loaded", data.url, data.msgHdr, data.originalUrl, data.type,
 // --- UI callbacks
 
 function deferSendMsg(aCompType) {
-  let body = CKEDITOR.instances.editor.getData();
   let iframe = document.getElementsByTagName("iframe")[0];
-  // We're Thunderbird, so make sure we send 1999-style HTML!
-  body = 
-    "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n"+
-    "<html>\n"+
-    "  <head>\n"+
-    "    <meta http-equiv=\"content-type\" content=\"text/html;\n"+
-    "      charset=ISO-8859-1\">\n"+
-    "  </head>\n"+
-    "  <body bgcolor=\"#ffffff\" text=\"#000000\">\n"+
-    "    "+body+"\n"+
-    "  </body>\n"+
-    "</html>\n";
-  // Never, EVER, forget the trailing newline. I mean it, man.
-
-  // XXX is it even useful to pass the body at that point? We're overriding
-  // m_composeHTML anyway, which means nsMsgSend gets the body from the editor.
   sendMessage( {
       identity: gIdentities[$("#from").val()],
       to: $("#to").val(),
       cc: $("#cc").val(),
       bcc: $("#bcc").val(),
       subject: $("#subject").val(),
-      body: body,
     }, data, iframe, {
       progressListener: progressListener,
       sendListener: sendListener,
@@ -95,6 +80,20 @@ function setupIdentities() {
   }
 }
 
+function wrapFormatting(aHtml) {
+  let fgColor = msgComposePrefs.getCharPref("text_color");
+  let bgColor = msgComposePrefs.getCharPref("background_color");
+  let fontFace = msgComposePrefs.getCharPref("font_face");
+  let fontSize = msgComposePrefs.getCharPref("font_size");
+  let style =
+    "font-family: "+fontFace+"; " +
+    "font-size: "+fontSize+"; " +
+    "color: "+fgColor+"; " +
+    "background-color: "+bgColor+";"
+  ;
+  return ('<body style="'+style+'">'+aHtml+'</body>');
+}
+
 // Just get the email and/or name from a MIME-style "John Doe <john@blah.com>"
 //  line.
 function parse(aMimeLine) {
@@ -122,7 +121,7 @@ function setupDraft(prePopulateData) {
       data.msgHdr,
       document.getElementById("secret"),
       function (aHtml) {
-        document.getElementById("editor").textContent = aHtml;
+        document.getElementById("editor").textContent = wrapFormatting(aHtml);
         replaceEditor();
       }
     );
@@ -153,7 +152,7 @@ function setupForwardInline() {
       document.getElementById("secret"),
       function (aHtml) {
         document.getElementById("editor").textContent =
-          "<p><span id='startMarker'></span></p>\n" + header + aHtml;
+          wrapFormatting("<p></p>\n" + header + aHtml);
         replaceEditor();
       }
     );
@@ -201,7 +200,7 @@ function setupReply(prePopulateData) {
       document.getElementById("secret"),
       function (aHtml) {
         document.getElementById("editor").textContent =
-          "<p><span id='startMarker'></span></p><blockquote type='cite'>"+aHtml+"</blockquote>";
+          wrapFormatting("<p></p><blockquote type='cite'>"+aHtml+"</blockquote>");
         replaceEditor();
       }
     );
@@ -301,6 +300,7 @@ function setupEditor() {
     let prePopulateData = { to: null, cc: null, bcc: null };
     switch (data.type) {
       case mCompType.New:
+        document.getElementById("editor").textContent = wrapFormatting("");
         replaceEditor();
         break;
 

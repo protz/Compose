@@ -1,4 +1,4 @@
-var EXPORTED_SYMBOLS = ['sendMessage', 'quoteMessage']
+var EXPORTED_SYMBOLS = ['sendMessage', 'quoteMessage', 'wrapBody']
 
 let Cc = Components.classes;
 let Ci = Components.interfaces;
@@ -48,7 +48,7 @@ FakeEditor.prototype = {
       "    <meta http-equiv=\"content-type\" content=\"text/html;\n"+
       "      charset=ISO-8859-1\">\n"+
       "  </head>\n"+
-      "  <body bgcolor=\"#ffffff\" text=\"#000000\">\n"+
+      "  <body>"+
       "    "+this.iframe.contentDocument.body.innerHTML+"\n"+
       "  </body>\n"+
       "</html>\n"
@@ -62,7 +62,7 @@ FakeEditor.prototype = {
 /**
  * Actually send the message based on the given parameters.
  */
-function sendMessage({ identity, to, cc, bcc, subject, body },
+function sendMessage({ identity, to, cc, bcc, subject },
     { url, msgHdr, originalUrl, type, format, msgWindow, KomposeManager },
     aIframe, { progressListener, sendListener }, aCompType) {
 
@@ -76,7 +76,6 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
   fields.cc = cc;
   fields.bcc = bcc;
   fields.subject = subject;
-  fields.body = body;
 
   let references = [];
   switch (type) {
@@ -128,7 +127,7 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
                             .getService(Ci.nsIMsgAccountManager);
 
   let msgCompose = msgComposeService.InitCompose (null, params);
-  let fakeEditor = new FakeEditor(aIframe, body);
+  let fakeEditor = new FakeEditor(aIframe);
   msgCompose.composeHTML = true;
   msgCompose.editor = fakeEditor;
 
