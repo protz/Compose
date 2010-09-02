@@ -8,11 +8,7 @@ Cu.import("resource:///modules/iteratorUtils.jsm"); // for fixIterator
 Cu.import("resource:///modules/XPCOMUtils.jsm"); // for generateQI
 Cu.import("resource://kompose/compose.js");
 Cu.import("resource://kompose/log.js");
-try {
-  Cu.import("resource://people/modules/people.js");
-} catch (e) {
-  // Need... kill... user...
-}
+Cu.import("resource://people/modules/people.js");
 
 const msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
                             .QueryInterface(Ci.nsIMsgComposeService);
@@ -100,6 +96,37 @@ function parse(aMimeLine) {
   let names = {};
   let numAddresses = gHeaderParser.parseHeadersWithArray(aMimeLine, emails, names, fullNames);
   return [names.value, emails.value];
+}
+
+function setupForwardInline() {
+  let from = data.msgHdr.mime2DecodedAuthor;
+  let to = data.msgHdr.mime2DecodedRecipients;
+  let cc = data.msgHdr.ccList;
+  let date = (new Date(data.msgHdr.date/1000)).toLocaleString();
+  let ccLine = cc.length ?  "  Cc: " + cc + "<br />\n" : "";
+  let header = [
+    "---------- Original Message ----------\n",
+    "<div class='forwarded_header_block'>\n",
+    "  From: ", from, "<br />\n",
+    "  To: ", to, "<br />\n",
+    ccLine,
+    "  Date: ", date, "\n",
+    "</div>"
+  ].join("");
+  try {
+    quoteMessage(
+      data.msgHdr,
+      document.getElementById("secret"),
+      function (aHtml) {
+        document.getElementById("editor").textContent =
+          "<p><span id='startMarker'></span></p>\n" + header + aHtml;
+        replaceEditor();
+      }
+    );
+  } catch (e) {
+    Log.error(e);
+    dumpCallStack(e);
+  }
 }
 
 function setupReply(prePopulateData) {
@@ -227,7 +254,7 @@ function setupAutocomplete(prePopulateData) {
 function replaceEditor() {
   $("#editor").ckeditor(function _on_ckeditor_ready() {
     return;
-    // Try to move the caret BEFORE the quoted text...
+    // Try to move the cursor BEFORE the quoted text...
     let p = self.document.getElementsByTag("p")[0];
     self.getSelection().selectElement(p);
   });
@@ -252,6 +279,14 @@ function setupEditor() {
       case mCompType.ReplyToList:
         setupReply(prePopulateData);
         break;
+
+      case mCompType.ForwardInline:
+        setupForwardInline();
+        break;
+
+      default:
+        document.getElementById("editor").textContent = data.type + " (unsupported)";
+        replaceEditor();
     }
     setupAutocomplete(prePopulateData);
     setupProgressDialog();

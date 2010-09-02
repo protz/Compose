@@ -37,6 +37,9 @@
 let KomposeManager = null;
 
 window.addEventListener("load", function _overlay_eventListener () {
+  // Uncomment below to temporarily disable
+  //return;
+
   let NS = {};
   try {
     Components.utils.import("resource://kompose/log.js", NS);
