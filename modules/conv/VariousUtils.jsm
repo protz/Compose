@@ -51,7 +51,7 @@ const Ci = Components.interfaces;
 const Cc = Components.classes;
 const Cu = Components.utils;
 Cu.import("resource:///modules/gloda/mimemsg.js");
-Cu.import("resource://conversations/MsgHdrUtils.jsm");
+Cu.import("resource://kompose/conv/MsgHdrUtils.jsm");
 
 const txttohtmlconv = Cc["@mozilla.org/txttohtmlconv;1"]
                         .createInstance(Ci.mozITXTToHTMLConv);
