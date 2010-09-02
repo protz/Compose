@@ -9,6 +9,7 @@ Cu.import("resource:///modules/XPCOMUtils.jsm"); // for generateQI
 Cu.import("resource://kompose/compose.js");
 Cu.import("resource://kompose/log.js");
 Cu.import("resource://people/modules/people.js");
+Cu.import("resource://kompose/conv/MsgHdrUtils.jsm"); // for getMessageBody
 
 const msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
                             .QueryInterface(Ci.nsIMsgComposeService);
@@ -18,19 +19,13 @@ const msgAccountManager = Cc["@mozilla.org/messenger/account-manager;1"]
                             .getService(Ci.nsIMsgAccountManager);
 const mCompType = Ci.nsIMsgCompType;
 
+let KomposeManager = data.KomposeManager;
 Log.debug("Kompose loaded", data.url, data.msgHdr, data.originalUrl, data.type,
   data.format, data.identity, data.msgWindow, data.KomposeManager);
 
-let KomposeManager = data.KomposeManager;
+// --- UI callbacks
 
-function onShowAdvancedFields() {
-  // XXX this probably isn't used anymore, duh
-  $("#cc").closest("tr").fadeIn("slow");
-  $("#bcc").closest("tr").fadeIn("slow");
-  $("#moar").closest("td").fadeOut("slow");
-}
-
-function onSendMsg() {
+function deferSendMsg(aCompType) {
   let body = CKEDITOR.instances.editor.getData();
   let iframe = document.getElementsByTagName("iframe")[0];
   // We're Thunderbird, so make sure we send 1999-style HTML!
@@ -49,19 +44,25 @@ function onSendMsg() {
 
   // XXX is it even useful to pass the body at that point? We're overriding
   // m_composeHTML anyway, which means nsMsgSend gets the body from the editor.
-  sendMessage(
-    {
+  sendMessage( {
       identity: gIdentities[$("#from").val()],
       to: $("#to").val(),
       cc: $("#cc").val(),
       bcc: $("#bcc").val(),
       subject: $("#subject").val(),
       body: body,
-    }, data, iframe,
-    {
+    }, data, iframe, {
       progressListener: progressListener,
-      sendListener: sendListener
-    });
+      sendListener: sendListener,
+    }, aCompType);
+}
+
+function onSendMsg() {
+  deferSendMsg(Ci.nsIMsgCompDeliverMode.Now);
+}
+
+function onSaveAsDraft() {
+  deferSendMsg(Ci.nsIMsgCompDeliverMode.SaveAsDraft);
 }
 
 $(window).keydown(function (event) {
@@ -72,8 +73,12 @@ $(window).keydown(function (event) {
   }
 });
 
-let gIdentities = [];
+// --- Stuff that fills composition fields, including body, properly
 
+let gIdentities = [];
+let gOldDraftToDelete = null;
+
+// Fill the dropdown with all available identities
 function setupIdentities() {
   let $select = $("#from");
   let wantedId = data.identity || msgComposeService.defaultIdentity;
@@ -90,12 +95,41 @@ function setupIdentities() {
   }
 }
 
+// Just get the email and/or name from a MIME-style "John Doe <john@blah.com>"
+//  line.
 function parse(aMimeLine) {
   let emails = {};
   let fullNames = {};
   let names = {};
   let numAddresses = gHeaderParser.parseHeadersWithArray(aMimeLine, emails, names, fullNames);
   return [names.value, emails.value];
+}
+
+function setupDraft(prePopulateData) {
+  let [recipients, recipientsEmailAddresses] = parse(data.msgHdr.mime2DecodedRecipients);
+  let [ccList, ccListEmailAddresses] = parse(data.msgHdr.ccList);
+  let [bccList, bccListEmailAddresses] = parse(data.msgHdr.bccList);
+  prePopulateData.to = [asToken(null, r, recipientsEmailAddresses[i], null)
+    for each ([i, r] in Iterator(recipients))];
+  prePopulateData.cc = [asToken(null, cc, ccListEmailAddresses[i], null)
+    for each ([i, cc] in Iterator(ccList))];
+  prePopulateData.bcc = [asToken(null, bcc, bccListEmailAddresses[i], null)
+    for each ([i, bcc] in Iterator(bccList))];
+  gOldDraftToDelete = data.msgHdr;
+
+  try {
+    quoteMessage(
+      data.msgHdr,
+      document.getElementById("secret"),
+      function (aHtml) {
+        document.getElementById("editor").textContent = aHtml;
+        replaceEditor();
+      }
+    );
+  } catch (e) {
+    Log.error(e);
+    dumpCallStack(e);
+  }
 }
 
 function setupForwardInline() {
@@ -284,8 +318,13 @@ function setupEditor() {
         setupForwardInline();
         break;
 
+      case mCompType.Draft:
+        setupDraft(prePopulateData);
+        break;
+
       default:
-        document.getElementById("editor").textContent = data.type + " (unsupported)";
+        document.getElementById("editor").textContent =
+          "mCompType: " + data.type + " (unsupported)";
         replaceEditor();
     }
     setupAutocomplete(prePopulateData);
@@ -296,6 +335,11 @@ function setupEditor() {
     dumpCallStack(e);
   }
 }
+
+// --- Listeners.
+//
+// These are notified about the outcome of the send process and take the right
+//  action accordingly (close window on success, etc. etc.)
 
 function pValue (v) {
   $("#progressBar")
@@ -423,16 +467,24 @@ let sendListener = {
     //
     // Moar in mailnews/compose/src/nsComposeStrings.h
     Log.debug("onStopSending", aMsgID, aStatus, aMsg, aReturnFile);
-    if (aStatus & 0x80000000)
-      Log.debug("!NS_SUCCEEDED sending");
-    else
+    // This function is called only when the actual send has been performed,
+    //  i.e. is not called when saving a draft (although msgCompose.SendMsg is
+    //  called...)
+    if (!(aStatus & 0x80000000)) {
+      // NS_SUCCEEDED
+      if (gOldDraftToDelete)
+        msgHdrsDelete([gOldDraftToDelete]);
       closeTab();
+    } else {
+      Log.debug("NS_FAILED onStopSending");
+    }
   },
 
   /**
    * Notify the observer with the folder uri before the draft is copied.
    */
   onGetDraftFolderURI: function (aFolderURI) {
+    Log.debug("onGetDraftFolderURI", aFolderURI);
   },
 
   /**
@@ -440,10 +492,27 @@ let sendListener = {
    * eg : by closing the compose window without Send.
    */
   onSendNotPerformed: function (aMsgID, aStatus) {
+    Log.debug("onSendNotPerformed", aMsgID, aStatus);
   },
 
   QueryInterface: XPCOMUtils.generateQI([
     Ci.nsIMsgSendListener,
+    Ci.nsISupportsWeakReference,
+    Ci.nsISupports
+  ]),
+}
+
+let copyListener = {
+  onStopCopy: function (aStatus) {
+    if (!(aStatus & 0x80000000)) {
+      // NS_SUCCEEDED
+      if (gOldDraftToDelete)
+        msgHdrsDelete(gOldDraftToDelete);
+    }
+  },
+
+  QueryInterface: XPCOMUtils.generateQI([
+    Ci.nsIMsgCopyServiceListener,
     Ci.nsISupportsWeakReference,
     Ci.nsISupports
   ]),

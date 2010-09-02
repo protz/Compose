@@ -6,6 +6,8 @@ let Cu = Components.utils;
 let Cr = Components.results;
 
 Cu.import("resource:///modules/XPCOMUtils.jsm"); // for generateQI
+Cu.import("resource://kompose/conv/MsgHdrUtils.jsm"); // for msgHdrToNeckoURL
+Cu.import("resource://kompose/conv/VariousUtils.jsm"); // for range
 Cu.import("resource://kompose/log.js");
 
 const msgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
@@ -19,25 +21,6 @@ const accountManager = Cc["@mozilla.org/messenger/account-manager;1"]
 const mCompType = Ci.nsIMsgCompType;
 
 const kCharsetFromMetaTag = 10;
-
-/**
- * Get a nsIURI from a nsIMsgDBHdr
- * @param {nsIMsgDbHdr} aMsgHdr The message header
- * @return {nsIURI}
- */
-function msgHdrToNeckoURL(aMsgHdr) {
-  let uri = aMsgHdr.folder.getUriForMsg(aMsgHdr);
-  let neckoURL = {};
-  let msgService = messenger.messageServiceFromURI(uri);
-  msgService.GetUrlForUri(uri, neckoURL, null);
-  return neckoURL.value;
-}
-
-function range(begin, end) {
-  for (let i = begin; i < end; ++i) {
-    yield i;
-  }
-}
 
 function FakeEditor (aIframe) {
   this.iframe = aIframe;
@@ -81,7 +64,7 @@ FakeEditor.prototype = {
  */
 function sendMessage({ identity, to, cc, bcc, subject, body },
     { url, msgHdr, originalUrl, type, format, msgWindow, KomposeManager },
-    aIframe, { progressListener, sendListener }) {
+    aIframe, { progressListener, sendListener }, aCompType) {
 
   // Here is the part where we do all the stuff related to filling proper
   //  headers, adding references, making sure all the composition fields are
@@ -123,9 +106,9 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
   // TODO:
   // - fields.addAttachment (when attachments taken into account)
 
-  //fields.forcePlainText = true;
+  // See suite/mailnews/compose/MsgComposeCommands.js#1783
+  //fields.forcePlainText = false;
   //fields.useMultipartAlternative = true;
-  //fields.ConvertBodyToPlainText();
 
   // We probably want to change the format to be always HTML so that we don't
   //  need to override m_composeHTML later on.
@@ -158,7 +141,7 @@ function sendMessage({ identity, to, cc, bcc, subject, body },
   //msgCompose.RegisterStateListener(stateListener);
 
   try {
-    msgCompose.SendMsg (Ci.nsIMsgCompDeliverMode.Now, identity, "", null, progress);
+    msgCompose.SendMsg (aCompType, identity, "", null, progress);
   } catch (e) {
     Log.error(e);
     dumpCallStack(e);

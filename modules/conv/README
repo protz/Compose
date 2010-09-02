@@ -1,0 +1,4 @@
+These files are a collection of various utils I use. They are imported from the
+source tree of Thunderbird Conversations, which is also available on GitHub. Do
+not EVER touch these files, modify the original ones first, and fetch them once
+again manually.
