@@ -183,7 +183,10 @@ function setupReply(prePopulateData) {
       isReplyToOwnMsg = false;
   }
 
+  // Actually we are implementing the "Reply all" logic... that's better, no one
+  //  wants to really use reply anyway
   if (isReplyToOwnMsg) {
+    Log.debug("Replying to our own message...");
     prePopulateData.to = [asToken(null, r, recipientsEmailAddresses[i], null)
       for each ([i, r] in Iterator(recipients))];
   } else {
@@ -191,6 +194,10 @@ function setupReply(prePopulateData) {
   }
   prePopulateData.cc = [asToken(null, cc, ccListEmailAddresses[i], null)
     for each ([i, cc] in Iterator(ccList))];
+  if (!isReplyToOwnMsg)
+    prePopulateData.cc = prePopulateData.cc.concat
+      ([asToken(null, r, recipientsEmailAddresses[i], null)
+        for each ([i, r] in Iterator(recipients))]);
   prePopulateData.bcc = [asToken(null, bcc, bccListEmailAddresses[i], null)
     for each ([i, bcc] in Iterator(bccList))];
 
@@ -406,7 +413,6 @@ let progressListener = {
 
   QueryInterface: XPCOMUtils.generateQI([
     Ci.nsIWebProgressListener,
-    Ci.nsISupportsWeakReference,
     Ci.nsISupports
   ]),
 };
@@ -497,7 +503,6 @@ let sendListener = {
 
   QueryInterface: XPCOMUtils.generateQI([
     Ci.nsIMsgSendListener,
-    Ci.nsISupportsWeakReference,
     Ci.nsISupports
   ]),
 }
@@ -513,7 +518,6 @@ let copyListener = {
 
   QueryInterface: XPCOMUtils.generateQI([
     Ci.nsIMsgCopyServiceListener,
-    Ci.nsISupportsWeakReference,
     Ci.nsISupports
   ]),
 }
