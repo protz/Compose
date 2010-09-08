@@ -28,7 +28,6 @@ KomposeManager.prototype = {
   //                        in nsIMsgWindow aMsgWindow);
   OpenComposeWindow: function (aUrl, aMsgHdr, aOriginalUrl, aType, aFormat, aIdentity, aMsgWindow) {
     try {
-      // so unsafe, OMG
       let newTab = this.tabmail.openTab("composeTab", {
         url: aUrl,
         msgHdr: aMsgHdr,
@@ -69,6 +68,7 @@ KomposeManager.prototype = {
 
       // First clone the page and set up the basics.
       let browser = window.document.getElementById("dummychromebrowser").cloneNode(true);
+      browser.setAttribute("tooltip", "aHTMLTooltip");
       browser.setAttribute("id", "composeTab-" + this.lastId);
       browser.setAttribute("onclick", "specialTabs.defaultClickHandler(event);");
       browser.data = aArgs;

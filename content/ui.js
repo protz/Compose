@@ -186,7 +186,7 @@ function setupReply(prePopulateData) {
   }
 
   // Actually we are implementing the "Reply all" logic... that's better, no one
-  //  wants to really use reply anyway
+  //  wants to really use reply anyway ;-)
   if (isReplyToOwnMsg) {
     Log.debug("Replying to our own message...");
     prePopulateData.to = [asToken(null, r, recipientsEmailAddresses[i], null)
@@ -195,11 +195,13 @@ function setupReply(prePopulateData) {
     prePopulateData.to = [asToken(null, author, authorEmailAddress, null)];
   }
   prePopulateData.cc = [asToken(null, cc, ccListEmailAddresses[i], null)
-    for each ([i, cc] in Iterator(ccList))];
+    for each ([i, cc] in Iterator(ccList))
+    if (ccListEmailAddresses[i] != data.identity.email)];
   if (!isReplyToOwnMsg)
     prePopulateData.cc = prePopulateData.cc.concat
       ([asToken(null, r, recipientsEmailAddresses[i], null)
-        for each ([i, r] in Iterator(recipients))]);
+        for each ([i, r] in Iterator(recipients))
+        if (recipientsEmailAddresses[i] != data.identity.email)]);
   prePopulateData.bcc = [asToken(null, bcc, bccListEmailAddresses[i], null)
     for each ([i, bcc] in Iterator(bccList))];
 
