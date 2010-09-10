@@ -3,6 +3,7 @@ Compose in a tab
 
 This extension is a Mozilla Messaging experiment whose broad goal is to update
 the whole composition process. This includes:
+
 * rewriting (most parts of) nsMsgCompose.cpp in JS,
 * integrating an external composition UI (e.g. CKEditor),
 * add bonus features, like compose in a tab.
