@@ -1,5 +1,5 @@
-content kompose jar:chrome/kompose.jar!/content/
-skin kompose classic/1.0 jar:chrome/kompose.jar!/skin/
+content kompose content/
+skin kompose classic/1.0 skin/
 resource kompose modules/
 overlay chrome://messenger/content/messenger.xul chrome://kompose/content/overlay.xul
 style chrome://global/content/customizeToolbar.xul chrome://kompose/skin/overlay.css
