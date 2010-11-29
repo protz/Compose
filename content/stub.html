@@ -22,7 +22,10 @@
             jQuery("textarea.attachments").css({ 'height' : (h-2) });
             jQuery(".attachmentActions").css({ 'width' : (w) });
         });
-    });
+	jQuery("#subject").change(function() {
+	   document.title = this.value;
+	});
+  });
   </script>
   <meta charset="utf8" />
 </head>
