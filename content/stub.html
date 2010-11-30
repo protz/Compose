@@ -16,12 +16,16 @@
   <script type="application/javascript;version=1.8" src="ui.js"></script>
   <script type="text/javascript"> //center div vertically and horizontally
     jQuery(function(){
-        jQuery(window).bind('load resize', function(){
-            var h = jQuery('ul.meta').height();
-            var w = jQuery('textarea.attachments').innerWidth();
-            jQuery("textarea.attachments").css({ 'height' : (h-2) });
-            jQuery(".attachmentActions").css({ 'width' : (w) });
-        });
+      jQuery(window).bind('load resize', function(){
+        var h = jQuery('ul.meta').height();
+        var w = jQuery('textarea.attachments').innerWidth();
+        jQuery("textarea.attachments").css({ 'height' : (h-2) });
+        jQuery(".attachmentActions").css({ 'width' : (w) });
+        jQuery("#subject").change();
+      });
+      jQuery("#subject").change(function() {
+        document.title = this.value || "Write...";
+      });
     });
   </script>
   <meta charset="utf8" />
