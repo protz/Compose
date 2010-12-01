@@ -146,14 +146,15 @@ function setupForwardInline() {
     "  Date: ", date, "\n",
     "</div>"
   ].join("");
+  $("#subject").val("Fwd: "+data.msgHdr.mime2DecodedSubject);
   try {
     quoteMessage(
       data.msgHdr,
       document.getElementById("secret"),
       function (aHtml) {
         document.getElementById("editor").textContent =
-          wrapFormatting("<p></p>\n" + header + aHtml);
-        replaceEditor();
+          wrapFormatting(quoteSigAndStart(header + aHtml,false,true));
+        replaceEditor({cursorOnTop:1});
       }
     );
   } catch (e) {
@@ -209,7 +210,7 @@ function setupReply(prePopulateData) {
       document.getElementById("secret"),
       function (aHtml) {
         document.getElementById("editor").textContent =
-          wrapFormatting("<p></p><blockquote type='cite'>"+aHtml+"</blockquote>");
+          wrapFormatting(quoteSigAndStart(aHtml,true));
         replaceEditor();
       }
     );
@@ -217,6 +218,22 @@ function setupReply(prePopulateData) {
     Log.error(e);
     dumpCallStack(e);
   }
+}
+
+function quoteSigAndStart(quote, wrap_quote, top_cursor) {
+  ///pre/post-pends a blank paragraph depending on settings
+  ///TODO: include signature in the right place, too
+  var front = '', back='';
+  if (wrap_quote) {
+    quote = "<blockquote type='cite'>"+quote+"</blockquote>";
+  }
+  if (data.identity.replyOnTop > 0 || top_cursor) {
+    front += '<p class="start"></p>\n';
+  }
+  if (data.identity.replyOnTop !== 1) {
+    back += '\n<p class="start"></p>';
+  }
+  return (front + quote + back);
 }
 
 function asToken(thumb, name, email, guid) {
@@ -293,12 +310,40 @@ function setupAutocomplete(prePopulateData) {
   });
 }
 
-function replaceEditor() {
-  $("#editor").ckeditor(function _on_ckeditor_ready() {
-    return;
-    // Try to move the cursor BEFORE the quoted text...
-    let p = self.document.getElementsByTag("p")[0];
-    self.getSelection().selectElement(p);
+function replaceEditor(opts) {
+  $("#editor").ckeditor(function _on_ckeditor_ready(editorInstance) {
+    let sel = this.window.$.getSelection(),
+        doc = this.document.$,
+        rng = doc.createRange(),
+        cursorOnTop = opts && opts.cursorOnTop || data.identity.replyOnTop;
+    sel.removeAllRanges();
+    switch (cursorOnTop) {
+    case 0:
+      var n = doc.getElementsByClassName('start');
+      if (n.length) {
+	var bottom = n[n.length-1];
+	rng.selectNode(bottom);
+	rng.collapse(true);
+	doc.body.scrollTop = bottom.offsetTop + parseInt(this.window.$.innerHeight / 2);
+      }
+      break;
+    case 1:
+      rng.selectNode(doc.body.firstChild);
+      rng.collapse(true);
+      break;
+    case 2:
+      var n = doc.getElementsByTagName('blockquote');
+      if (n.length) {
+	rng.selectNode(n[0]);
+      }
+      break;
+    }
+    sel.addRange(rng);
+
+    if (!opts || opts.focus) {
+      this.focus();
+    }
+
   });
 }
 
@@ -310,7 +355,7 @@ function setupEditor() {
     switch (data.type) {
       case mCompType.New:
         document.getElementById("editor").textContent = wrapFormatting("");
-        replaceEditor();
+        replaceEditor({focus:false});
         break;
 
       case mCompType.Reply:
