@@ -59,6 +59,9 @@ FakeEditor.prototype = {
   QueryInterface: XPCOMUtils.generateQI([Ci.nsISupports, Ci.nsIEditor, Ci.nsIEditorMailSupport]),
 }
 
+// This one shouldn't be GC'd!
+let gMsgCompose;
+
 /**
  * Actually send the message based on the given parameters.
  */
@@ -126,10 +129,13 @@ function sendMessage({ identity, to, cc, bcc, subject },
   let msgAccountManager = Cc["@mozilla.org/messenger/account-manager;1"]
                             .getService(Ci.nsIMsgAccountManager);
 
-  let msgCompose = msgComposeService.InitCompose (null, params);
+  if ("InitCompose" in msgComposeService) // comm-1.9.2
+    gMsgCompose = msgComposeService.InitCompose (null, params);
+  else // comm-central
+    gMsgCompose = msgComposeService.initCompose(params);
   let fakeEditor = new FakeEditor(aIframe);
-  msgCompose.composeHTML = true;
-  msgCompose.editor = fakeEditor;
+  gMsgCompose.composeHTML = true;
+  gMsgCompose.editor = fakeEditor;
 
   // We create a progress listener...
   var progress = Cc["@mozilla.org/messenger/progress;1"]
@@ -137,10 +143,10 @@ function sendMessage({ identity, to, cc, bcc, subject },
   if (progress) {
     progress.registerListener(progressListener);
   }
-  //msgCompose.RegisterStateListener(stateListener);
+  //gMsgCompose.RegisterStateListener(stateListener);
 
   try {
-    msgCompose.SendMsg (aCompType, identity, "", null, progress);
+    gMsgCompose.SendMsg (aCompType, identity, "", null, progress);
   } catch (e) {
     Log.error(e);
     dumpCallStack(e);
