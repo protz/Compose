@@ -13,7 +13,8 @@
   <script type="text/javascript" src="ckeditor/adapters/jquery.js"></script>
   <!-- These are ours -->
   <link rel="stylesheet" type="text/css" href="chrome://kompose/skin/compose.css" />
-  <script type="application/javascript;version=1.8" src="ui.js"></script>
+  <script type="application/javascript;version=1.8" src="stub.compose-ui.js"></script>
+  <script type="application/javascript;version=1.8" src="stub.completion-ui.js"></script>
   <script type="text/javascript"> //center div vertically and horizontally
     jQuery(function(){
       jQuery(window).bind('load resize', function(){
@@ -88,8 +89,8 @@
     </div>
   </div>
   <div id="sendWrapper">
-    <button tabindex="-1" onclick="onSendMsg();">send</button>
-    <button tabindex="-1" onclick="onSaveAsDraft();">save</button>
+    <button tabindex="-1" onclick="onSend();">send</button>
+    <button tabindex="-1" onclick="onSave();">save</button>
     <button tabindex="-1">discard</button>
   </div>
   <div id="editorWrapper">

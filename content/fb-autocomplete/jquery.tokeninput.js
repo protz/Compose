@@ -6,6 +6,13 @@
  * Licensed jointly under the GPL and MIT licenses,
  * choose which one suits your project best!
  *
+ * Heavily modified by jonathan.protzenko@gmail.com:
+ * - add tooltips through the title attribute
+ * - allow to separate the data that's actually stored from the key that's
+ *   displayed
+ * - change the way callbacks work
+ * - a lot more...
+ *
  */
 
 (function($) {
@@ -254,7 +261,8 @@ $.TokenList = function (input, settings) {
         li_data = settings.prePopulate;
         if(li_data && li_data.length) {
             for(var i in li_data) {
-                var this_token = $("<li><p>"+li_data[i].name+"</p> </li>")
+                // XXX change things here
+                var this_token = $("<li title=\""+li_data[i].data+"\"><p>"+li_data[i].name+"</p> </li>")
                     .addClass(settings.classes.token)
                     .insertBefore(input_token);
 
@@ -311,7 +319,8 @@ $.TokenList = function (input, settings) {
 
     // Inner function to a token to the list
     function insert_token(id, value, data) {
-      var this_token = $("<li><p>"+ value +"</p> </li>")
+      // XXX and here
+      var this_token = $("<li title=\""+data.data+"\"><p>"+ value +"</p> </li>")
       .addClass(settings.classes.token)
       .insertBefore(input_token);
 
