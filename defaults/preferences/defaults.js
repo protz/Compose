@@ -1,0 +1,1 @@
+pref("kompose.path", "kompose");
