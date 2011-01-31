@@ -23,6 +23,7 @@
     <em:description>Compose messages the new hip way!</em:description>
     <em:creator>Jonathan Protzenko</em:creator>
     <!--<em:optionsURL>chrome://compose/content/options.xul</em:optionsURL>-->
+    <em:unpack>true</em:unpack>
     <em:iconURL>chrome://kompose/content/icon.png</em:iconURL>
 
   </Description>      
