@@ -197,46 +197,10 @@ ComposeSession.prototype = {
     let msgHdr = this.iComposeParams.msgHdr;
     let identity = this.iComposeParams.identity;
     // Do the whole shebang to find out who to send to...
-    let [author, authorEmailAddress] = parseToArrays(msgHdr.mime2DecodedAuthor);
-    let [recipients, recipientsEmailAddresses] = parseToArrays(msgHdr.mime2DecodedRecipients);
-    let [ccList, ccListEmailAddresses] = parseToArrays(msgHdr.ccList);
-    let [bccList, bccListEmailAddresses] = parseToArrays(msgHdr.bccList);
-    let to = [], cc = [], bcc = [];
-
-    let isReplyToOwnMsg = false;
-    for each (let [i, identity] in Iterator(gIdentities)) {
-      // It happens that gIdentities.default is null!
-      if (!identity) {
-        Log.debug("This identity is null, pretty weird...");
-        continue;
-      }
-      let email = identity.email;
-      if (email == authorEmailAddress)
-        isReplyToOwnMsg = true;
-      if (recipientsEmailAddresses.some(function (x) x == email))
-        isReplyToOwnMsg = false;
-      if (ccListEmailAddresses.some(function (x) x == email))
-        isReplyToOwnMsg = false;
-    }
-
-    // Actually we are implementing the "Reply all" logic... that's better, no one
-    //  wants to really use reply anyway ;-)
-    if (isReplyToOwnMsg) {
-      to = [asToken(null, r, recipientsEmailAddresses[i], null)
-        for each ([i, r] in Iterator(recipients))];
-    } else {
-      to = [asToken(null, author, authorEmailAddress, null)];
-    }
-    cc = [asToken(null, cc, ccListEmailAddresses[i], null)
-      for each ([i, cc] in Iterator(ccList))
-      if (ccListEmailAddresses[i] != identity.email)];
-    if (!isReplyToOwnMsg)
-      cc = cc.concat
-        ([asToken(null, r, recipientsEmailAddresses[i], null)
-          for each ([i, r] in Iterator(recipients))
-          if (recipientsEmailAddresses[i] != identity.email)]);
-    bcc = [asToken(null, bcc, bccListEmailAddresses[i], null)
-      for each ([i, bcc] in Iterator(bccList))];
+    let params = replyAllParams(identity, msgHdr);
+    let to = [asToken(null, name, email, null) for each ([name, email] in params.to)];
+    let cc = [asToken(null, name, email, null) for each ([name, email] in params.cc)];
+    let bcc = [asToken(null, name, email, null) for each ([name, email] in params.bcc)];
 
     let finish = function () {
       if (aReplyAll)
@@ -348,27 +312,26 @@ ComposeSession.prototype = {
   },
 
   send: function (event, options) {
+    let iframe = document.getElementsByTagName("iframe")[0];
     return sendMessage({
-        msgHdr: gComposeParams.msgHdr,
-        identity: gComposeParams.identity,
+        msgHdr: this.iComposeParams.msgHdr,
+        identity: this.iComposeParams.identity,
         to: $("#to").val(),
         cc: $("#cc").val(),
         bcc: $("#bcc").val(),
-        subject: isNewThread ? $("#subject").val() : gComposeParams.subject,
+        subject: $("#subject").val(),
       }, {
-        compType: isNewThread ? Ci.nsIMsgCompType.New : Ci.nsIMsgCompType.ReplyAll,
+        compType: this.iComposeParams.type, // XXX check if this is really meaningful
         deliverType: Ci.nsIMsgCompDeliverMode.Now,
-      }, textarea, {
+      }, { match: function (x) {
+        x.editor(iframe);
+      }}, {
         progressListener: progressListener,
         sendListener: sendListener,
-        stateListener: createStateListener(gComposeParams,
-          gWillArchive,
-          Conversations.currentConversation.msgHdrs,
-          Conversations.currentConversation.id
-        ),
+        stateListener: stateListener,
       }, {
-        popOut: popOut,
-        archive: archive,
+        popOut: false,
+        archive: false,
       });
   },
 
@@ -391,21 +354,10 @@ let gEditor = {
 //
 // These are notified about the outcome of the send process and take the right
 //  action accordingly (close window on success, etc. etc.)
-//  
-// This process is inherently FLAWED because we can't listen for the end of the
-//  "save sent message" event which would actually tell us that we're done. From
-//  what I understand from
-//  http://mxr.mozilla.org/comm-central/source/mailnews/compose/src/nsMsgCompose.cpp#3520,
-//  the onStopSending event tells us that we're done if and only if we're not
-//  copying the message to the sent folder.
-// Otherwise, we need to listen for the OnStopCopy event.
-//  http://mxr.mozilla.org/comm-central/source/mailnews/compose/src/nsMsgSend.cpp#4149
-//  But this is harcoded and mListener is nsMsgComposeSendListener in
-//  nsMsgCompose.cpp (bad!).
-// There's a thing called a state listener that might be what we're looking
-//  for...
 
 function pValue (v) {
+  Log.debug(v+"%");
+  return;
   $(".statusPercentage")
     .show()
     .text(v+"%");
@@ -413,11 +365,14 @@ function pValue (v) {
 }
 
 function pUndetermined () {
+  return;
   $(".statusPercentage").hide();
   $(".statusThrobber").show();
 }
 
 function pText (t) {
+  Log.debug(t);
+  return;
   $(".statusMessage").text(t);
 }
 
@@ -578,23 +533,22 @@ let copyListener = {
   ]),
 }
 
-function createStateListener (aComposeParams, aWillArchive, aMsgHdrs, aId) {
-  return {
-    NotifyComposeFieldsReady: function() {
-      // ComposeFieldsReady();
-    },
+let stateListener = {
+  NotifyComposeFieldsReady: function() {
+    // ComposeFieldsReady();
+  },
 
-    NotifyComposeBodyReady: function() {
-      // if (gMsgCompose.composeHTML)
-      //   loadHTMLMsgPrefs();
-      // AdjustFocus();
-    },
+  NotifyComposeBodyReady: function() {
+    // if (gMsgCompose.composeHTML)
+    //   loadHTMLMsgPrefs();
+    // AdjustFocus();
+  },
 
-    ComposeProcessDone: function(aResult) {
-    },
+  ComposeProcessDone: function(aResult) {
+    Log.debug("Done");
+  },
 
-    SaveInFolderDone: function(folderURI) {
-      // DisplaySaveFolderDlg(folderURI);
-    }
-  };
-}
+  SaveInFolderDone: function(folderURI) {
+    // DisplaySaveFolderDlg(folderURI);
+  }
+};

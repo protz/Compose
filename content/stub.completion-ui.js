@@ -62,9 +62,9 @@ try {
 function asToken(thumb, name, email, guid) {
   let hasName = name && (String.trim(name).length > 0);
   let data = hasName ? gHeaderParser.makeFullAddress(name, email) : email;
-  let thumbStr = thumb ? "<img class='autocomplete-thumb' src=\""+thumb+"\" /> " : "";
-  let nameStr = hasName ? name + " &lt;" + email + "&gt;" : email;
-  let listItem = thumbStr + nameStr;
+  let thumbStr = thumb ? "<img class='autocomplete-thumb' src=\""+escapeHtml(thumb)+"\" /> " : "";
+  let nameStr = hasName ? name + " <" + email + ">" : email;
+  let listItem = thumbStr + escapeHtml(nameStr);
   let id = guid;
   let displayName = hasName ? name : email;
   return { name: displayName, listItem: listItem, data: data, email: email, id: guid }
