@@ -117,7 +117,7 @@ ComposeSession.prototype = {
     for each (let [email, id] in Iterator(gIdentities)) {
       if (email == "default")
         continue;
-      let selected = (id == wantedId) ? "selected" : "";
+      let selected = (id.email == wantedId.email) ? "selected" : "";
       let v = id.fullName + " <"+id.email+">";
       $select.append($("<option></option>")
         .attr("selected", selected)
