@@ -257,6 +257,7 @@ ComposeSession.prototype = {
     ;
     let quoteAndWrap = function (aText, k) {
       quoteMsgHdr(this.iComposeParams.msgHdr, function (body) {
+        body = body.replace(/<\/body>\s*<\/html>$/m, "");
         let html = [
           "<p></p>"
           + aText +
@@ -313,12 +314,16 @@ ComposeSession.prototype = {
 
   send: function (event, options) {
     let iframe = document.getElementsByTagName("iframe")[0];
+    let to = $("#to").val();
+    let cc = $("#cc").val();
+    let bcc = $("#bcc").val();
+    Log.debug("To:", to, "Cc:", cc, "Bcc:", bcc);
     return sendMessage({
         msgHdr: this.iComposeParams.msgHdr,
         identity: this.iComposeParams.identity,
-        to: $("#to").val(),
-        cc: $("#cc").val(),
-        bcc: $("#bcc").val(),
+        to: to,
+        cc: cc,
+        bcc: bcc,
         subject: $("#subject").val(),
       }, {
         compType: this.iComposeParams.type, // XXX check if this is really meaningful
