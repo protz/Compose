@@ -15,6 +15,7 @@
   <link rel="stylesheet" type="text/css" href="chrome://kompose/skin/compose.css" />
   <script type="application/javascript;version=1.8" src="stub.compose-ui.js"></script>
   <script type="application/javascript;version=1.8" src="stub.completion-ui.js"></script>
+  <script type="application/javascript;version=1.8" src="stub.ui.js"></script>
   <script type="text/javascript"> //center div vertically and horizontally
     jQuery(function(){
       jQuery(window).bind('load resize', function(){
@@ -81,10 +82,11 @@
     </div>
     
     <div class="rightColumn">
-      <textarea class="attachments" tabindex="-1">
-      </textarea>
+      <select size="4" class="attachments" tabindex="-1" multiple="multiple">
+      </select>
       <div class="attachmentActions">
-        <button tabindex="-1" class="attach">attach </button><button tabindex="-1">remove</button>
+        <button onclick="attachFile();" tabindex="-1" class="attach">attach </button
+        ><button onclick="removeFile();" tabindex="-1">remove</button>
       </div>
     </div>
   </div>

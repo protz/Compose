@@ -35,6 +35,7 @@ let composeTabType = {
     // First clone the page and set up the basics.
     let browser = window.document.getElementById("dummychromebrowser").cloneNode(true);
     browser.setAttribute("tooltip", "aHTMLTooltip");
+    browser.setAttribute("context", "mailContext");
     browser.setAttribute("id", "composeTab-" + this.lastId);
     browser.setAttribute("onclick", "specialTabs.defaultClickHandler(event);");
     browser.data = aArgs;
@@ -309,9 +310,9 @@ MonkeyPatch.prototype = {
         // subjects from the URIs.
         if (type == msgComposeType.ForwardAsAttachment && uri)
           self.OpenComposeWindow(null,
-                                              messageArray.length > 1 ? null : hdr,
-                                              uri, type, format,
-                                              identity, msgWindow);
+                                 messageArray.length > 1 ? null : hdr,
+                                 uri, type, format,
+                                 identity, msgWindow);
       } else {
         dump("### nodeList is invalid\n");
       }
@@ -343,6 +344,9 @@ MonkeyPatch.prototype = {
             msgWindow: aMsgWindow,
             monkeyPatch: self,
           });
+          browser.contentWindow.closeTab = function () {
+            self.tabmail.closeTab(newTab);
+          };
         }
       });
     } catch (e) {

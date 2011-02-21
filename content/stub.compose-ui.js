@@ -318,6 +318,11 @@ ComposeSession.prototype = {
     let cc = $("#cc").val();
     let bcc = $("#bcc").val();
     Log.debug("To:", to, "Cc:", cc, "Bcc:", bcc);
+    let deliverType = Ci.nsIMsgCompDeliverMode.Now;
+    let attachments = $(".attachments")
+      .children()
+      .map(function () createAttachment($(this).data("file")))
+      .get();
     return sendMessage({
         msgHdr: this.iComposeParams.msgHdr,
         identity: this.iComposeParams.identity,
@@ -325,15 +330,16 @@ ComposeSession.prototype = {
         cc: cc,
         bcc: bcc,
         subject: $("#subject").val(),
+        attachments: attachments,
       }, {
         compType: this.iComposeParams.type, // XXX check if this is really meaningful
-        deliverType: Ci.nsIMsgCompDeliverMode.Now,
+        deliverType: deliverType,
       }, { match: function (x) {
         x.editor(iframe);
       }}, {
         progressListener: progressListener,
         sendListener: sendListener,
-        stateListener: stateListener,
+        stateListener: createStateListener(deliverType),
       }, {
         popOut: false,
         archive: false,
@@ -342,17 +348,20 @@ ComposeSession.prototype = {
 
 };
 
-// ----- Our fake editor instance
-
-let gEditor = {
-  OutputToString: function () {
-  },
-
-  getEmbeddedObjects: function () {
-  },
-};
-
 // ----- Main logic
+
+const ioService = Cc["@mozilla.org/network/io-service;1"]
+                  .getService(Ci.nsIIOService);
+
+function createAttachment(aFile) {
+  let attachment = Cc["@mozilla.org/messengercompose/attachment;1"]
+                   .createInstance(Ci.nsIMsgAttachment);
+  let uri = ioService.newFileURI(aFile);
+  attachment.url = uri.spec;
+  attachment.name = aFile.leafName;
+  //attachment.size = aFile.fileSize;
+  return attachment;
+}
 
 
 // ----- Listeners.
@@ -538,22 +547,36 @@ let copyListener = {
   ]),
 }
 
-let stateListener = {
-  NotifyComposeFieldsReady: function() {
-    // ComposeFieldsReady();
-  },
+function createStateListener (aDeliverType) {
+  return {
+    NotifyComposeFieldsReady: function() {
+      // ComposeFieldsReady();
+    },
 
-  NotifyComposeBodyReady: function() {
-    // if (gMsgCompose.composeHTML)
-    //   loadHTMLMsgPrefs();
-    // AdjustFocus();
-  },
+    NotifyComposeBodyReady: function() {
+      // if (gMsgCompose.composeHTML)
+      //   loadHTMLMsgPrefs();
+      // AdjustFocus();
+    },
 
-  ComposeProcessDone: function(aResult) {
-    Log.debug("Done");
-  },
+    ComposeProcessDone: function(aResult) {
+      Log.debug("ComposeProcessDone", aResult, NS_SUCCEEDED(aResult));
+      switch (aDeliverType) { 
+        case Ci.nsIMsgCompDeliverMode.Now:
+          if (NS_SUCCEEDED(aResult)) {
+            closeTab(); // defined from the outside, see monkeypatch.js
+          } else {
+            // The usual error handlers will notify the user for us.
+          }
+          break;
 
-  SaveInFolderDone: function(folderURI) {
-    // DisplaySaveFolderDlg(folderURI);
-  }
-};
+        default:
+          Log.error("Send process completed without a handler.");
+      }
+    },
+
+    SaveInFolderDone: function(folderURI) {
+      // DisplaySaveFolderDlg(folderURI);
+    }
+  };
+}

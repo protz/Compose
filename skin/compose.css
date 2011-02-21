@@ -99,7 +99,8 @@ input {
   min-width: 200px;
 }
 
-textarea.attachments {
+.attachments {
+  height: 175px;
   width: 100%;
   position: relative;
   border: 1px solid #aaa;
