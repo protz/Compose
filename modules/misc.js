@@ -23,12 +23,12 @@ function wrapWithFormatting (aHtml) {
   let fontFace = msgComposePrefs.getCharPref("font_face");
   let fontSize = msgComposePrefs.getCharPref("font_size");
   let style =
-    "font-family: "+fontFace+"; " +
+    "font-family: '"+fontFace+"'; " +
     "font-size: "+fontSize+"; " +
     "color: "+fgColor+"; " +
     "background-color: "+bgColor+";"
   ;
-  return ('<body style="'+style+'">'+aHtml+'</body>');
+  return ('<div style="'+style+'">'+aHtml+'</div>');
 }
 
 function parseToArrays(aMimeLine) {

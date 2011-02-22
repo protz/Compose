@@ -252,21 +252,23 @@ ComposeSession.prototype = {
           this.focus();
       });
     };
+    // Don't know why, but the Thunderbird quoting code sometimes just appends
+    // </body>\n</html> at the end of the string, without the opening tags... so
+    // do some regexp-foo to get rid of them.
     let extractBody = function (aHtml)
-      aHtml.replace(new RegExp(".*<body>(.*?)</body>.*"), "$1");
+      aHtml.replace(/(?:.|\s)*<body>((.|\s)*)<\/body>(?:.|\s)*/m, "$1")
+        .replace(/<\/body>\s*<\/html>\s*/m, "")
     ;
     let quoteAndWrap = function (aText, k) {
       quoteMsgHdr(this.iComposeParams.msgHdr, function (body) {
-        body = body.replace(/<\/body>\s*<\/html>$/m, "");
-        let html = [
+        let html =
           "<p></p>"
           + aText +
           "<blockquote type='cite'>"
             + extractBody(body) +
           "</blockquote>"
-        ];
+        ;
         html = wrapWithFormatting(html);
-        Log.debug(html);
         k(html);
       });
     }.bind(this);
@@ -305,7 +307,7 @@ ComposeSession.prototype = {
       }
 
       default:
-        setupEditor("", {
+        setupEditor(wrapWithFormatting(""), {
           focus: false
         });
         break;
