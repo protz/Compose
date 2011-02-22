@@ -37,20 +37,25 @@
 Cu.import("resource:///modules/iteratorUtils.jsm"); // for fixIterator
 
 function attachFile() {
-  let box = $(".attachments");
   let filePicker = Cc["@mozilla.org/filepicker;1"]
     .createInstance(Ci.nsIFilePicker);
   filePicker.init(window, "Attach file(s)", Ci.nsIFilePicker.modeOpenMultiple);
   if (filePicker.show() == Ci.nsIFilePicker.returnOK) {
     for each (file in fixIterator(filePicker.files, Ci.nsILocalFile)) {
-      let node = $("<option />")
-        .data("file", file)
-        .text(file.leafName+" ")
-        .append($("<span style='color: gray' />")
-          .text(gMessenger.formatFileSize(file.fileSize)));
-      box.append(node);
+      let uri = ioService.newFileURI(file);
+      addAttachmentItem({ name: file.leafName, url: uri.spec, size: file.fileSize });
     }
   }
+}
+
+function addAttachmentItem(data) {
+  let box = $(".attachments");
+  let node = $("<option />")
+    .data("file", data)
+    .text(data.name+" ")
+    .append($("<span style='color: gray' />")
+      .text(gMessenger.formatFileSize(data.size)));
+  box.append(node);
 }
 
 function removeFile() {

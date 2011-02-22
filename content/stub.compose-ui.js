@@ -48,6 +48,8 @@ const gMessenger = Cc["@mozilla.org/messenger;1"]
                    .createInstance(Ci.nsIMessenger);
 const gHeaderParser = Cc["@mozilla.org/messenger/headerparser;1"]
                       .getService(Ci.nsIMsgHeaderParser);
+const ioService = Cc["@mozilla.org/network/io-service;1"]
+                  .getService(Ci.nsIIOService);
 // Various composition types:
 //  New                      = 0;
 //  Reply                    = 1;
@@ -78,12 +80,22 @@ let Log = setupLogging("Compose.Stub");
 let gComposeSession;
 
 function initialize (aComposeParams) {
-  // Create the new composition session
-  gComposeSession = new ComposeSession(aComposeParams);
-  gComposeSession.setupIdentities();
-  gComposeSession.setupMiscFields();
-  gComposeSession.setupAutocomplete();
-  gComposeSession.setupQuote();
+  let doStuff = function () {
+    // Create the new composition session
+    gComposeSession = new ComposeSession(aComposeParams);
+    gComposeSession.setupIdentities();
+    gComposeSession.setupMiscFields();
+    gComposeSession.setupAutocomplete();
+    gComposeSession.setupQuote();
+  };
+  if (aComposeParams.msgHdr) {
+    MsgHdrToMimeMessage(aComposeParams.msgHdr, this, function (aMsgHdr, aMimeMessage) {
+      aComposeParams.mimeMsg = aMimeMessage;
+      doStuff();
+    }, true);
+  } else {
+    doStuff();
+  }
 
   // Register extra event listeners
   $(window).keydown(function (event) {
@@ -121,13 +133,16 @@ ComposeSession.prototype = {
       let v = id.fullName + " <"+id.email+">";
       $select.append($("<option></option>")
         .attr("selected", selected)
-        .attr("value", v)
+        .attr("value", id.email)
         .text(v)
       );
     }
   },
 
   setupMiscFields: function () {
+    let subject;
+    if (this.iComposeParams.msgHdr)
+      subject = this.iComposeParams.msgHdr.mime2DecodedSubject;
     let v = "";
     switch (this.iComposeParams.type) {
       case gCompType.Reply:
@@ -137,12 +152,18 @@ ComposeSession.prototype = {
       case gCompType.ReplyToSenderAndGroup:
       case gCompType.ReplyWithTemplate:
       case gCompType.ReplyToList:
-        v = "Re: "+this.iComposeParams.msgHdr.mime2DecodedSubject;
+        v = "Re: "+subject;
         break;
       case gCompType.ForwardAsAttachment:
       case gCompType.ForwardInline:
-        v = "Fwd: "+this.iComposeParams.msgHdr.mime2DecodedSubject;
+        v = "Fwd: "+subject;
         break;
+      case gCompType.Draft:
+        v = subject;
+        for each (let att in this.iComposeParams.mimeMsg.allUserAttachments) {
+          // XXX this means we can't delete the original draft until we're done.
+          addAttachmentItem(att); // Magically works. Hurray!
+        }
       default:
         break;
     }
@@ -159,7 +180,6 @@ ComposeSession.prototype = {
       case gCompType.ForwardAsAttachment:
       case gCompType.ForwardInline:
       case gCompType.NewsPost:
-      case gCompType.Draft:
       case gCompType.Template:
       case gCompType.Redirect:
         setupAutocomplete([], [], []);
@@ -176,14 +196,15 @@ ComposeSession.prototype = {
 
       case gCompType.Reply:
       case gCompType.ReplyToSender:
-        this._setupAutocompleteReply(false, k);
+        this._setupAutocomplete(false, k);
         break;
 
       case gCompType.ReplyWithTemplate:
       case gCompType.ReplyToGroup:
       case gCompType.ReplyToSenderAndGroup:
       case gCompType.ReplyAll:
-        this._setupAutocompleteReply(true, k);
+      case gCompType.Draft:
+        this._setupAutocomplete(true, k);
         break;
     }
   },
@@ -193,7 +214,7 @@ ComposeSession.prototype = {
    *  should be cc'd, bcc'd, what happens if I'm replying to my own message, what
    *  happens if there's a reply-to header...
    */
-  _setupAutocompleteReply: function (aReplyAll, k) {
+  _setupAutocomplete: function (aReplyAll, k) {
     let msgHdr = this.iComposeParams.msgHdr;
     let identity = this.iComposeParams.identity;
     // Do the whole shebang to find out who to send to...
@@ -202,29 +223,17 @@ ComposeSession.prototype = {
     let cc = [asToken(null, name, email, null) for each ([name, email] in params.cc)];
     let bcc = [asToken(null, name, email, null) for each ([name, email] in params.bcc)];
 
-    let finish = function () {
-      if (aReplyAll)
-        k(to, cc, bcc);
-      else
-        k(to, [], []);
-    };
-
-    // We're streaming the message just to get the reply-to header... kind of a
-    //  shame...
-    try {
-      MsgHdrToMimeMessage(msgHdr, null, function (msgHdr, aMimeMsg) {
-        if ("reply-to" in aMimeMsg.headers) {
-          let [{ name, email }] = parseMimeLine(aMimeMsg.headers["reply-to"]);
-          if (email) {
-            to = [asToken(null, name, email, null)];
-          }
-        }
-        finish();
-      }, false); // don't download
-    } catch (e if e.result == Cr.NS_ERROR_FAILURE) { // Message not available offline.
-      // And update our nice composition UI
-      finish();
+    let mimeMsg = this.iComposeParams.mimeMsg;
+    if ("reply-to" in mimeMsg.headers) {
+      let [{ name, email }] = parseMimeLine(mimeMsg.headers["reply-to"]);
+      if (email) {
+        to = [asToken(null, name, email, null)];
+      }
     }
+    if (aReplyAll)
+      k(to, cc, bcc);
+    else
+      k(to, [], []);
   },
 
   setupQuote: function () {
@@ -262,13 +271,12 @@ ComposeSession.prototype = {
     let quoteAndWrap = function (aText, k) {
       quoteMsgHdr(this.iComposeParams.msgHdr, function (body) {
         let html =
-          "<p></p>"
+          wrapWithFormatting("<p></p>")
           + aText +
           "<blockquote type='cite'>"
             + extractBody(body) +
           "</blockquote>"
         ;
-        html = wrapWithFormatting(html);
         k(html);
       });
     }.bind(this);
@@ -306,6 +314,24 @@ ComposeSession.prototype = {
         break;
       }
 
+      case gCompType.Draft: {
+        let mimeMsg = this.iComposeParams.mimeMsg;
+        let body;
+        try {
+          (function search (obj) {
+            if (obj instanceof MimeBody) {
+              body = obj.body;
+              throw null;
+            } else if ("parts" in obj) {
+              [search(x) for each (x in obj.parts)];
+            }
+          })(mimeMsg);
+        } catch (e) {
+        }
+        setupEditor(body);
+        break;
+      }
+
       default:
         setupEditor(wrapWithFormatting(""), {
           focus: false
@@ -315,6 +341,7 @@ ComposeSession.prototype = {
   },
 
   send: function (event, options) {
+    let identity = gIdentities[$("#from").val()];
     let iframe = document.getElementsByTagName("iframe")[0];
     let to = $("#to").val();
     let cc = $("#cc").val();
@@ -327,7 +354,7 @@ ComposeSession.prototype = {
       .get();
     return sendMessage({
         msgHdr: this.iComposeParams.msgHdr,
-        identity: this.iComposeParams.identity,
+        identity: identity,
         to: to,
         cc: cc,
         bcc: bcc,
@@ -352,16 +379,11 @@ ComposeSession.prototype = {
 
 // ----- Main logic
 
-const ioService = Cc["@mozilla.org/network/io-service;1"]
-                  .getService(Ci.nsIIOService);
-
-function createAttachment(aFile) {
+function createAttachment({ name, url, size }) {
   let attachment = Cc["@mozilla.org/messengercompose/attachment;1"]
                    .createInstance(Ci.nsIMsgAttachment);
-  let uri = ioService.newFileURI(aFile);
-  attachment.url = uri.spec;
-  attachment.name = aFile.leafName;
-  //attachment.size = aFile.fileSize;
+  attachment.url = url;
+  attachment.name = name;
   return attachment;
 }
 
