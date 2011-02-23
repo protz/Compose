@@ -265,8 +265,9 @@ ComposeSession.prototype = {
     // </body>\n</html> at the end of the string, without the opening tags... so
     // do some regexp-foo to get rid of them.
     let extractBody = function (aHtml)
-      aHtml.replace(/(?:.|\s)*<body>((.|\s)*)<\/body>(?:.|\s)*/m, "$1")
-        .replace(/<\/body>\s*<\/html>\s*/m, "")
+      aHtml
+      // aHtml.replace(/(?:.|\s)*<body>((.|\s)*)<\/body>(?:.|\s)*/m, "$1")
+      //   .replace(/<\/body>\s*<\/html>\s*/m, "")
     ;
     let quoteAndWrap = function (aText, k) {
       quoteMsgHdr(this.iComposeParams.msgHdr, function (body) {
