@@ -335,14 +335,14 @@ MonkeyPatch.prototype = {
       let newTab = this.tabmail.openTab("composeTab", {
         onLoad: function (event, browser) {
           browser.contentWindow.initialize({
-            url: aUrl,
+            url: aUrl, // unused
             msgHdr: aMsgHdr,
-            originalUrl: aOriginalUrl,
+            originalUrl: aOriginalUrl, // unused, should be (forward as att)
             type: aType,
-            format: aFormat,
+            format: aFormat, // unused
             identity: aIdentity,
-            msgWindow: aMsgWindow,
-            monkeyPatch: self,
+            msgWindow: aMsgWindow, // unused
+            monkeyPatch: self, // unused
           });
           browser.contentWindow.closeTab = function () {
             self.tabmail.closeTab(newTab);

@@ -139,6 +139,9 @@ ComposeSession.prototype = {
     }
   },
 
+  /**
+   * This function sets up various fields, such as subject, attachments, etc.
+   */
   setupMiscFields: function () {
     let subject;
     if (this.iComposeParams.msgHdr)
@@ -154,16 +157,32 @@ ComposeSession.prototype = {
       case gCompType.ReplyToList:
         v = "Re: "+subject;
         break;
-      case gCompType.ForwardAsAttachment:
+
+      case gCompType.ForwardAsAttachment: {
+        let uris = this.iComposeParams.originalUrl.split(",");
+        for each (let [i, uri] in Iterator(uris)) {
+          let msgHdr = msgUriToMsgHdr(uri);
+          addAttachmentItem({
+            name: msgHdr.mime2DecodedSubject+".eml",
+            url: uri,
+            size: 0,
+          });
+          subject = msgHdr.mime2DecodedSubject;
+        }
+        // FALL-THROUGH
+      }
       case gCompType.ForwardInline:
         v = "Fwd: "+subject;
         break;
+
       case gCompType.Draft:
         v = subject;
         for each (let att in this.iComposeParams.mimeMsg.allUserAttachments) {
           // XXX this means we can't delete the original draft until we're done.
           addAttachmentItem(att); // Magically works. Hurray!
         }
+        break;
+
       default:
         break;
     }
@@ -284,8 +303,7 @@ ComposeSession.prototype = {
 
     switch (this.iComposeParams.type) {
       case gCompType.ForwardAsAttachment:
-        Log.error("Not implemented");
-        setupEditor();
+        setupEditor("");
         break;
 
       case gCompType.ForwardInline: {
@@ -353,8 +371,9 @@ ComposeSession.prototype = {
       .children()
       .map(function () createAttachment($(this).data("file")))
       .get();
+    let urls = this.iComposeParams.originalUrl.split(",");
     return sendMessage({
-        msgHdr: this.iComposeParams.msgHdr,
+        urls: urls,
         identity: identity,
         to: to,
         cc: cc,
@@ -385,6 +404,7 @@ function createAttachment({ name, url, size }) {
                    .createInstance(Ci.nsIMsgAttachment);
   attachment.url = url;
   attachment.name = name;
+  Log.debug(url, name);
   return attachment;
 }
 
