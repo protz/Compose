@@ -371,7 +371,10 @@ ComposeSession.prototype = {
       .children()
       .map(function () createAttachment($(this).data("file")))
       .get();
-    let urls = this.iComposeParams.originalUrl.split(",");
+    let urls = this.iComposeParams.originalUrl
+      ? this.iComposeParams.originalUrl.split(",")
+      : []
+    ;
     return sendMessage({
         urls: urls,
         identity: identity,
@@ -609,6 +612,7 @@ function createStateListener (aDeliverType) {
       switch (aDeliverType) { 
         case Ci.nsIMsgCompDeliverMode.Now:
           if (NS_SUCCEEDED(aResult)) {
+            window.close();
             closeTab(); // defined from the outside, see monkeypatch.js
           } else {
             // The usual error handlers will notify the user for us.
