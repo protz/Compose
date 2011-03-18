@@ -1,0 +1,12 @@
+diff -r -p -u ckeditor//_source/plugins/wsc/plugin.js /home/nas/gallium/protzenk/Code/kompose@xulforum.org/content/ckeditor//_source/plugins/wsc/plugin.js
+--- ckeditor//_source/plugins/wsc/plugin.js	2011-02-16 17:47:47.000000000 +0100
++++ /home/nas/gallium/protzenk/Code/kompose@xulforum.org/content/ckeditor//_source/plugins/wsc/plugin.js	2011-03-18 17:48:17.247539853 +0100
+@@ -18,7 +18,7 @@ CKEDITOR.plugins.add( 'wsc',
+ 		var command = editor.addCommand( commandName, new CKEDITOR.dialogCommand( commandName ) );
+ 
+ 		// SpellChecker doesn't work in Opera and with custom domain
+-		command.modes = { wysiwyg : ( !CKEDITOR.env.opera && !CKEDITOR.env.air && document.domain == window.location.hostname ) };
++		command.modes = { wysiwyg : true };
+ 
+ 		editor.ui.addButton( 'SpellChecker',
+ 			{
