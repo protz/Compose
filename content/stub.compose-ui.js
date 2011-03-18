@@ -237,22 +237,15 @@ ComposeSession.prototype = {
     let msgHdr = this.iComposeParams.msgHdr;
     let identity = this.iComposeParams.identity;
     // Do the whole shebang to find out who to send to...
-    let params = replyAllParams(identity, msgHdr);
-    let to = [asToken(null, name, email, null) for each ([name, email] in params.to)];
-    let cc = [asToken(null, name, email, null) for each ([name, email] in params.cc)];
-    let bcc = [asToken(null, name, email, null) for each ([name, email] in params.bcc)];
-
-    let mimeMsg = this.iComposeParams.mimeMsg;
-    if ("reply-to" in mimeMsg.headers) {
-      let [{ name, email }] = parseMimeLine(mimeMsg.headers["reply-to"]);
-      if (email) {
-        to = [asToken(null, name, email, null)];
-      }
-    }
-    if (aReplyAll)
-      k(to, cc, bcc);
-    else
-      k(to, [], []);
+    replyAllParams(identity, msgHdr, function (params) {
+      let to = [asToken(null, name, email, null) for each ([name, email] in params.to)];
+      let cc = [asToken(null, name, email, null) for each ([name, email] in params.cc)];
+      let bcc = [asToken(null, name, email, null) for each ([name, email] in params.bcc)];
+      if (aReplyAll)
+        k(to, cc, bcc);
+      else
+        k(to, [], []);
+    });
   },
 
   setupQuote: function () {
