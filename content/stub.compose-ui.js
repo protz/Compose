@@ -281,8 +281,9 @@ ComposeSession.prototype = {
       // aHtml.replace(/(?:.|\s)*<body>((.|\s)*)<\/body>(?:.|\s)*/m, "$1")
       //   .replace(/<\/body>\s*<\/html>\s*/m, "")
     ;
+    let self = this;
     let quoteAndWrap = function (aText, k) {
-      quoteMsgHdr(this.iComposeParams.msgHdr, function (body) {
+      quoteMsgHdr(self.iComposeParams.msgHdr, function (body) {
         let html =
           wrapWithFormatting("<p></p>")
           + aText +
@@ -292,7 +293,7 @@ ComposeSession.prototype = {
         ;
         k(html);
       });
-    }.bind(this);
+    };
 
     switch (this.iComposeParams.type) {
       case gCompType.ForwardAsAttachment:
