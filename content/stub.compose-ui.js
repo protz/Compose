@@ -231,6 +231,19 @@ ComposeSession.prototype = {
     }
   },
 
+  RE_LIST_POST: /<mailto:([^>]+)>/,
+
+  _setupAutocompleteList: function (k) {
+    let aMimeMsg = this.iComposeParams.mimeMsg;
+    if (aMimeMsg && aMimeMsg.has("list-post")) {
+      let match = this.RE_LIST_POST.exec(aMimeMsg.get("list-post"));
+      if (match) {
+        let listAddress = match[1];
+        k([asToken(null, "", listAddress, null)], [], []);
+      }
+    }
+  },
+
   _setupAutocompleteDraft: function (k) {
     let from = parseToPairs(this.iComposeParams.msgHdr.mime2DecodedAuthor);
     let to = parseToPairs(this.iComposeParams.msgHdr.mime2DecodedRecipients);
