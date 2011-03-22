@@ -5,7 +5,7 @@ let Ci = Components.interfaces;
 let Cu = Components.utils;
 let Cr = Components.results;
 
-Cu.import("resource://kompose/misc.js");
+Cu.import("resource://kompose/stdlib/misc.js");
 Cu.import("resource://kompose/log.js");
 Cu.import("resource://kompose/stdlib/msgHdrUtils.js");
 
