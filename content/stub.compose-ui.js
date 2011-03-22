@@ -130,7 +130,7 @@ ComposeSession.prototype = {
       if (email == "default")
         continue;
       let selected = (id.email == wantedId.email) ? "selected" : "";
-      let v = id.fullName + " <"+id.email+">";
+      let v = formatIdentity(id);
       $select.append($("<option></option>")
         .attr("selected", selected)
         .attr("value", id.email)
@@ -218,14 +218,31 @@ ComposeSession.prototype = {
         this._setupAutocomplete(false, k);
         break;
 
+      case gCompType.Draft:
+        this._setupAutocompleteDraft(k);
+        break;
+
       case gCompType.ReplyWithTemplate:
       case gCompType.ReplyToGroup:
       case gCompType.ReplyToSenderAndGroup:
       case gCompType.ReplyAll:
-      case gCompType.Draft:
         this._setupAutocomplete(true, k);
         break;
     }
+  },
+
+  _setupAutocompleteDraft: function (k) {
+    let from = parseToPairs(this.iComposeParams.msgHdr.mime2DecodedAuthor);
+    let to = parseToPairs(this.iComposeParams.msgHdr.mime2DecodedRecipients);
+    let cc = parseToPairs(this.iComposeParams.msgHdr.ccList);
+    let bcc = parseToPairs(this.iComposeParams.msgHdr.bccList);
+
+    let fromEmail = from[0][1];
+    $("#from").val(fromEmail);
+    let pTo = [asToken(null, name, email, null) for each([name, email] in to)];
+    let pCc = [asToken(null, name, email, null) for each([name, email] in cc)];
+    let pBcc = [asToken(null, name, email, null) for each([name, email] in bcc)];
+    k(pTo, pCc, pBcc);
   },
 
   /**

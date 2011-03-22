@@ -62,15 +62,25 @@ For licensing, see LICENSE.html or http://ckeditor.com/license
 
 			var node;
 
-			// If this is a block under a list item, split it as well. (#1647)
+			// If this is a block under a list item or blockquote, split it as well. (#1647)
 			if ( nextBlock )
 			{
 				node = nextBlock.getParent();
-				if ( node.is( 'li' ) )
+				if ( node.is( 'li', 'blockquote' ) )
 				{
 					nextBlock.breakParent( node );
 					nextBlock.move( nextBlock.getNext(), 1 );
 				}
+				// Put the caret between the splitted nodes
+				if ( node.is( 'blockquote' ) )
+				{
+					var block = doc.createElement( blockTag );
+					block.insertBefore( nextBlock.getParent() );
+					if ( !CKEDITOR.env.ie )
+						block.appendBogus();
+					nextBlock = block;
+				}
+
 			}
 			else if ( previousBlock && ( node = previousBlock.getParent() ) && node.is( 'li' ) )
 			{

@@ -1,9 +1,12 @@
-var EXPORTED_SYMBOLS = ['wrapWithFormatting', 'parseToArrays'];
+var EXPORTED_SYMBOLS = ['wrapWithFormatting', 'parseToArrays', 'parseToPairs',
+	'formatIdentity'];
 
 const Ci = Components.interfaces;
 const Cc = Components.classes;
 const Cu = Components.utils;
 const Cr = Components.results;
+
+Cu.import("resource://kompose/stdlib/misc.js");
 
 const msgComposePrefs = Cc["@mozilla.org/preferences-service;1"]
                           .getService(Ci.nsIPrefService)
@@ -37,4 +40,13 @@ function parseToArrays(aMimeLine) {
   let names = {};
   let numAddresses = gHeaderParser.parseHeadersWithArray(aMimeLine, emails, names, fullNames);
   return [names.value, emails.value];
+}
+
+function parseToPairs(aMimeLine) {
+	let [names, emails] = parseToArrays(aMimeLine);
+	return [[names[i], emails[i]] for each (i in range(0, names.length))];
+}
+
+function formatIdentity(id) {
+	return (id.fullName + " <"+id.email+">");
 }

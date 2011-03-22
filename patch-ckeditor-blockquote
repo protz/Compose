@@ -1,0 +1,30 @@
+--- ckeditor/_source/plugins/enterkey/plugin.js	2011-03-22 10:22:33.608475443 +0100
++++ ckeditor/_source/plugins/enterkey/plugin.js.orig	2011-03-22 10:21:37.632438957 +0100
+@@ -62,25 +62,15 @@ For licensing, see LICENSE.html or http:
+ 
+ 			var node;
+ 
+-			// If this is a block under a list item or blockquote, split it as well. (#1647)
++			// If this is a block under a list item, split it as well. (#1647)
+ 			if ( nextBlock )
+ 			{
+ 				node = nextBlock.getParent();
+-				if ( node.is( 'li', 'blockquote' ) )
++				if ( node.is( 'li' ) )
+ 				{
+ 					nextBlock.breakParent( node );
+ 					nextBlock.move( nextBlock.getNext(), 1 );
+ 				}
+-				// Put the caret between the splitted nodes
+-				if ( node.is( 'blockquote' ) )
+-				{
+-					var block = doc.createElement( blockTag );
+-					block.insertBefore( nextBlock.getParent() );
+-					if ( !CKEDITOR.env.ie )
+-						block.appendBogus();
+-					nextBlock = block;
+-				}
+-
+ 			}
+ 			else if ( previousBlock && ( node = previousBlock.getParent() ) && node.is( 'li' ) )
+ 			{
