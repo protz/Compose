@@ -5,191 +5,12 @@ let Ci = Components.interfaces;
 let Cu = Components.utils;
 let Cr = Components.results;
 
+Cu.import("resource://kompose/misc.js");
 Cu.import("resource://kompose/log.js");
 Cu.import("resource://kompose/stdlib/msgHdrUtils.js");
 
 let Log = setupLogging("Compose.MonkeyPatch");
 let kComposeUrl = "chrome://kompose/content/stub.html";
-
-let composeTabType = {
-  name: "composeTab",
-  perTabPanel: "vbox",
-  lastId: 0,
-
-  modes: {
-    composeTab: {
-      type: "composeTab",
-      maxTabs: 10
-    }
-  },
-
-  // Always open new conversation windows. Not true if we try to edit a draft that
-  // already has an associated conversation window open, but that's for later...
-  shouldSwitchTo: function onSwitchTo() {
-    return -1;
-  },
-
-  openTab: function onTabOpened(aTab, aArgs) {
-    let window = getMail3Pane();
-
-    // First clone the page and set up the basics.
-    let browser = window.document.getElementById("dummychromebrowser").cloneNode(true);
-    browser.setAttribute("tooltip", "aHTMLTooltip");
-    browser.setAttribute("context", "mailContext");
-    browser.setAttribute("id", "composeTab-" + this.lastId);
-    browser.setAttribute("onclick", "specialTabs.defaultClickHandler(event);");
-    browser.data = aArgs;
-    browser.data.tabObject = aTab;
-
-    // Done.
-    aTab.panel.appendChild(browser);
-    aTab.browser = browser;
-
-    // Now set up the listeners.
-    this._setUpTitleListener(aTab);
-    this._setUpCloseWindowListener(aTab);
-
-    // Now start loading the content.
-    aTab.title = "Conversation View";
-    browser.addEventListener("load", function _onload (event) {
-      browser.removeEventListener("load", _onload, true);
-      aArgs.onLoad(event, browser);
-    }, true);
-    browser.loadURI(kComposeUrl);
-
-    this.lastId++;
-  },
-
-  closeTab: function onTabClosed(aTab) {
-    aTab.browser.removeEventListener("DOMTitleChanged",
-                                     aTab.titleListener, true);
-    aTab.browser.removeEventListener("DOMWindowClose",
-                                     aTab.closeListener, true);
-    aTab.browser.destroy();
-  },
-
-  saveTabState: function onSaveTabState(aTab) {
-  },
-
-  showTab: function onShowTab(aTab) {
-  },
-
-  persistTab: function onPersistTab(aTab) {
-    // TODO save the current tab's status. Save the msgHdr through its URI
-  },
-
-  restoreTab: function onRestoreTab(aTabmail, aPersistedState) {
-    // TODO create a new tab with the same status...
-  },
-
-  onTitleChanged: function onTitleChanged(aTab) {
-    aTab.title = aTab.browser.contentDocument.title;
-  },
-
-  supportsCommand: function supportsCommand(aCommand, aTab) {
-    switch (aCommand) {
-      case "cmd_fullZoomReduce":
-      case "cmd_fullZoomEnlarge":
-      case "cmd_fullZoomReset":
-      case "cmd_fullZoomToggle":
-      case "cmd_printSetup":
-      case "cmd_print":
-      case "button_print":
-      // XXX print preview not currently supported - bug 497994 to implement.
-      // case "cmd_printpreview":
-        return true;
-      default:
-        return false;
-    }
-  },
-
-  isCommandEnabled: function isCommandEnabled(aCommand, aTab) {
-    switch (aCommand) {
-      case "cmd_fullZoomReduce":
-      case "cmd_fullZoomEnlarge":
-      case "cmd_fullZoomReset":
-      case "cmd_fullZoomToggle":
-      case "cmd_printSetup":
-      case "cmd_print":
-      case "button_print":
-      // XXX print preview not currently supported - bug 497994 to implement.
-      // case "cmd_printpreview":
-        return true;
-      default:
-        return false;
-    }
-  },
-
-  doCommand: function isCommandEnabled(aCommand, aTab) {
-    switch (aCommand) {
-      case "cmd_fullZoomReduce":
-        ZoomManager.reduce();
-        break;
-      case "cmd_fullZoomEnlarge":
-        ZoomManager.enlarge();
-        break;
-      case "cmd_fullZoomReset":
-        ZoomManager.reset();
-        break;
-      case "cmd_fullZoomToggle":
-        ZoomManager.toggleZoom();
-        break;
-      case "cmd_printSetup":
-        PrintUtils.showPageSetup();
-        break;
-      case "cmd_print":
-        PrintUtils.print();
-        break;
-      // XXX print preview not currently supported - bug 497994 to implement.
-      //case "cmd_printpreview":
-      //  PrintUtils.printPreview();
-      //  break;
-    }
-  },
-
-  getBrowser: function getBrowser(aTab) {
-    return aTab.browser;
-  },
-
-  // Internal function used to set up the title listener on a content tab.
-  _setUpTitleListener: function setUpTitleListener(aTab) {
-    function onDOMTitleChanged(aEvent) {
-      getMail3Pane()
-        .document.getElementById("tabmail").setTabTitle(aTab);
-    }
-    // Save the function we'll use as listener so we can remove it later.
-    aTab.titleListener = onDOMTitleChanged;
-    // Add the listener.
-    aTab.browser.addEventListener("DOMTitleChanged",
-                                  aTab.titleListener, true);
-  },
-  /**
-   * Internal function used to set up the close window listener on a content
-   * tab.
-   */
-  _setUpCloseWindowListener: function setUpCloseWindowListener(aTab) {
-    function onDOMWindowClose(aEvent) {
-      try {
-        if (!aEvent.isTrusted)
-          return;
-
-        // Redirect any window.close events to closing the tab. As a 3-pane tab
-        // must be open, we don't need to worry about being the last tab open.
-        
-        getMail3Pane()
-          document.getElementById("tabmail").closeTab(aTab);
-        aEvent.preventDefault();
-      } catch (e) {
-        logException(e);
-      }
-    }
-    // Save the function we'll use as listener so we can remove it later.
-    aTab.closeListener = onDOMWindowClose;
-    // Add the listener.
-    aTab.browser.addEventListener("DOMWindowClose",
-                                  aTab.closeListener, true);
-  }
-};
 
 function MonkeyPatch (aWindow) {
   getMail3Pane(true);
@@ -202,7 +23,6 @@ MonkeyPatch.prototype = {
 
     // Register our new tab type...
     this.tabmail = this.window.document.getElementById("tabmail");  
-    this.tabmail.registerTabType(composeTabType);
 
     // Ideally, we would replace the nsMsgComposeService with our own, but for the
     //  time being, let's just stick to that monkey-patch. When it's about time,
@@ -332,22 +152,21 @@ MonkeyPatch.prototype = {
   OpenComposeWindow: function (aUrl, aMsgHdr, aOriginalUrl, aType, aFormat, aIdentity, aMsgWindow) {
     try {
       let self = this;
-      let newTab = this.tabmail.openTab("composeTab", {
-        onLoad: function (event, browser) {
-          browser.contentWindow.initialize({
-            url: aUrl, // unused
-            msgHdr: aMsgHdr,
-            originalUrl: aOriginalUrl, // unused, should be (forward as att)
-            type: aType,
-            format: aFormat, // unused
-            identity: aIdentity,
-            msgWindow: aMsgWindow, // unused
-            monkeyPatch: self, // unused
-          });
-          browser.contentWindow.closeTab = function () {
-            self.tabmail.closeTab(newTab);
-          };
-        }
+      let params = {
+        // url: aUrl, // unused
+        msgHdr: aMsgHdr,
+        originalUrl: aOriginalUrl,
+        type: aType,
+        // format: aFormat, // unused
+        identity: aIdentity,
+        // msgWindow: aMsgWindow, // unused
+        // monkeyPatch: self, // unused
+      };
+      params.msgHdr = msgHdrGetUri(params.msgHdr);
+      params.identity = params.identity.email;
+      let url = kComposeUrl+"?"+encodeUrlParameters(params);
+      let newTab = this.tabmail.openTab("chromeTab", {
+        chromePage: url,
       });
     } catch (e) {
       Log.error(e);

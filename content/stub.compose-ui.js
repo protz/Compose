@@ -79,7 +79,13 @@ let Log = setupLogging("Compose.Stub");
 
 let gComposeSession;
 
-function initialize (aComposeParams) {
+function initialize () {
+  // Rebuild the various compose parameters from the URI.
+  let aComposeParams = decodeUrlParameters(document.location.href);
+  aComposeParams.identity = gIdentities[aComposeParams.identity];
+  aComposeParams.msgHdr = msgUriToMsgHdr(aComposeParams.msgHdr);
+  aComposeParams.type = parseInt(aComposeParams.type);
+
   let doStuff = function () {
     // Create the new composition session
     gComposeSession = new ComposeSession(aComposeParams);
@@ -106,6 +112,10 @@ function initialize (aComposeParams) {
     }
   });
 }
+
+$(document).ready(function () {
+  initialize();
+});
 
 function ComposeSession (aComposeParams) {
   // Initial composition parameters.
@@ -636,7 +646,6 @@ function createStateListener (aDeliverType) {
       switch (aDeliverType) { 
         case Ci.nsIMsgCompDeliverMode.Now:
           if (NS_SUCCEEDED(aResult)) {
-            window.close();
             closeTab(); // defined from the outside, see monkeypatch.js
           } else {
             // The usual error handlers will notify the user for us.

@@ -1,5 +1,6 @@
 var EXPORTED_SYMBOLS = ['wrapWithFormatting', 'parseToArrays', 'parseToPairs',
-	'formatIdentity'];
+	'formatIdentity', 'encodeUrlParameters', 'decodeUrlParameters',
+];
 
 const Ci = Components.interfaces;
 const Cc = Components.classes;
@@ -49,4 +50,27 @@ function parseToPairs(aMimeLine) {
 
 function formatIdentity(id) {
 	return (id.fullName + " <"+id.email+">");
+}
+
+function encodeUrlParameters(aObj) {
+	let kv = [];
+	for each (let [k, v] in Iterator(aObj)) {
+		kv.push(k+"="+encodeURIComponent(v));
+	}
+	return kv.join("&");
+}
+
+function decodeUrlParameters(aStr) {
+	let params = {};
+	let i = aStr.indexOf("?");
+	if (i >= 0) {
+		let query = aStr.substring(i+1, aStr.length);
+		let keyVals = query.split("&");
+		for each (let [, keyVal] in Iterator(keyVals)) {
+			let [key, val] = keyVal.split("=");
+			val = decodeURIComponent(val);
+			params[key] = val;
+		}
+	}
+	return params;
 }
