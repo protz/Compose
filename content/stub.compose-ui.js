@@ -83,7 +83,9 @@ function initialize () {
   // Rebuild the various compose parameters from the URI.
   let aComposeParams = decodeUrlParameters(document.location.href);
   aComposeParams.identity = gIdentities[aComposeParams.identity];
-  aComposeParams.msgHdr = msgUriToMsgHdr(aComposeParams.msgHdr);
+  aComposeParams.msgHdr = aComposeParams.msgHdr.length
+    ? msgUriToMsgHdr(aComposeParams.msgHdr)
+    : null;
   aComposeParams.type = parseInt(aComposeParams.type);
 
   let doStuff = function () {
