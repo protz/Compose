@@ -155,7 +155,7 @@ MonkeyPatch.prototype = {
       let params = {
         // url: aUrl, // unused
         msgHdr: aMsgHdr,
-        originalUrl: aOriginalUrl,
+        originalUrl: aOriginalUrl ? aOriginalUrl : undefined,
         type: aType,
         // format: aFormat, // unused
         identity: aIdentity,

@@ -44,11 +44,11 @@ function parseToArrays(aMimeLine) {
 }
 
 function parseToPairs(aMimeLine) {
-	let [names, emails] = parseToArrays(aMimeLine);
-	return [[names[i], emails[i]] for each (i in range(0, names.length))];
+  let [names, emails] = parseToArrays(aMimeLine);
+  return [[names[i], emails[i]] for each (i in range(0, names.length))];
 }
 
 function formatIdentity(id) {
-	return (id.fullName + " <"+id.email+">");
+  return (id.fullName + " <"+id.email+">");
 }
 

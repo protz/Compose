@@ -43,7 +43,9 @@ window.addEventListener("load", function _overlay_eventListener () {
     Components.utils.import("resource://kompose/monkeypatch.js", NS);
     Components.utils.import("resource://kompose/stdlib/misc.js", NS);
     (new NS.MonkeyPatch(window)).install();
-    NS.fillIdentities();
+    // We don't want the identities list to contain the NNTP identities, since
+    //  we're not going to compose with these anyway...
+    NS.fillIdentities(true);
   } catch (e) {
     dump(e+"\n");
     dump(e.stack+"\n");

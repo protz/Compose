@@ -40,6 +40,7 @@ let Cu = Components.utils;
 let Cr = Components.results;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm"); // for generateQI
+Cu.import("resource:///modules/MailUtils.js"); // for getFolderForURI
 Cu.import("resource:///modules/gloda/mimemsg.js"); // For MsgHdrToMimeMessage
 
 const gMsgComposeService = Cc["@mozilla.org/messengercompose;1"].getService()
@@ -77,6 +78,10 @@ Cu.import("resource://kompose/log.js");
 
 let Log = setupLogging("Compose.Stub");
 
+const kReasonSent = 0;
+const kReasonClosed = 1;
+const kReasonDiscard = 2;
+
 let gComposeSession;
 
 function initialize () {
@@ -109,7 +114,7 @@ function initialize () {
   $(window).keydown(function (event) {
     if (event.metaKey && event.which == 13) {
       Log.debug("Triggered the keyboard shortcut, sending...");
-      gComposeSession.send();
+      onSend();
       return false; // otherwise it gets fired twice
     }
   });
@@ -132,6 +137,8 @@ function ComposeSession (aComposeParams) {
   //    monkeyPatch,
   //  }
   this.iComposeParams = aComposeParams;
+  this.originalDraft = null;
+  this.currentDraft = null;
 }
 
 ComposeSession.prototype = {
@@ -193,6 +200,7 @@ ComposeSession.prototype = {
           // XXX this means we can't delete the original draft until we're done.
           addAttachmentItem(att); // Magically works. Hurray!
         }
+        this.originalDraft = this.iComposeParams.msgHdr;
         break;
 
       default:
@@ -395,14 +403,21 @@ ComposeSession.prototype = {
     }
   },
 
-  send: function (event, options) {
+  send: function (options) {
     let identity = gIdentities[$("#from").val()];
     let iframe = document.getElementsByTagName("iframe")[0];
     let to = $("#to").val();
     let cc = $("#cc").val();
     let bcc = $("#bcc").val();
-    Log.debug("To:", to, "Cc:", cc, "Bcc:", bcc);
     let deliverType = Ci.nsIMsgCompDeliverMode.Now;
+    if (options && ("deliverType" in options))
+      deliverType = options.deliverType;
+    let compType = this.iComposeParams.type;
+    if (options && ("compType" in options))
+      compType = options.compType;
+    let k = function () {};
+    if (options && ("k" in options))
+      k = options.k;
     let attachments = $(".attachments")
       .children()
       .map(function () createAttachment($(this).data("file")))
@@ -411,7 +426,11 @@ ComposeSession.prototype = {
       ? this.iComposeParams.originalUrl.split(",")
       : []
     ;
-    return sendMessage({
+    // The various listeners will enrich obj with several pieces of inforamtion,
+    // and then the state listener will call k and pass it obj, so that the UI
+    // code can act upon that and whatever it needs to do.
+    let obj = {};
+    obj.msgCompose = sendMessage({
         urls: urls,
         identity: identity,
         to: to,
@@ -420,18 +439,37 @@ ComposeSession.prototype = {
         subject: $("#subject").val(),
         attachments: attachments,
       }, {
-        compType: this.iComposeParams.type, // XXX check if this is really meaningful
+        compType: compType,
         deliverType: deliverType,
       }, { match: function (x) {
         x.editor(iframe);
       }}, {
         progressListener: progressListener,
-        sendListener: sendListener,
-        stateListener: createStateListener(deliverType),
+        sendListener: createSendListener(obj),
+        stateListener: createStateListener(obj, k),
       }, {
         popOut: false,
         archive: false,
       });
+  },
+
+  cleanup: function (aReason) {
+    switch (aReason) {
+      case kReasonSent:
+      case kReasonDiscard:
+        if (this.originalDraft)
+          msgHdrsDelete([this.originalDraft]);
+        if (this.currentDraft)
+          msgHdrsDelete([this.currentDraft]);
+        break;
+
+      case kReasonClosed:
+        // We assume whoever called us made sure everything was saved properly.
+        // Now the new draft is this.currentDraft, which of course don't want to
+        // delete.
+        if (this.originalDraft)
+          msgHdrsDelete([this.originalDraft]);
+    }
   },
 
 };
@@ -454,7 +492,7 @@ function createAttachment({ name, url, size }) {
 //  action accordingly (close window on success, etc. etc.)
 
 function pValue (v) {
-  Log.debug(v+"%");
+  //Log.debug(v+"%");
   return;
   $(".statusPercentage")
     .show()
@@ -469,7 +507,7 @@ function pUndetermined () {
 }
 
 function pText (t) {
-  Log.debug(t);
+  //Log.debug(t);
   return;
   $(".statusMessage").text(t);
 }
@@ -477,7 +515,7 @@ function pText (t) {
 // all progress notifications are done through the nsIWebProgressListener implementation...
 let progressListener = {
   onStateChange: function (aWebProgress, aRequest, aStateFlags, aStatus) {
-    Log.debug("onStateChange", aWebProgress, aRequest, aStateFlags, aStatus);
+    //Log.debug("onStateChange", aWebProgress, aRequest, aStateFlags, aStatus);
     if (aStateFlags & Ci.nsIWebProgressListener.STATE_START) {
       pUndetermined();
       $(".quickReplyHeader").show();
@@ -490,7 +528,7 @@ let progressListener = {
   },
 
   onProgressChange: function(aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress) {
-    Log.debug("onProgressChange", aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress);
+    //Log.debug("onProgressChange", aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress);
     // Calculate percentage.
     var percent;
     if (aMaxTotalProgress > 0) {
@@ -524,104 +562,87 @@ let progressListener = {
   ]),
 };
 
-let sendListener = {
-  /**
-   * Notify the observer that the message has started to be delivered. This method is
-   * called only once, at the beginning of a message send operation.
-   *
-   * @return The return value is currently ignored.  In the future it may be
-   * used to cancel the URL load..
-   */
-  onStartSending: function (aMsgID, aMsgSize) {
-    pText("Sending message...");
-    $("textarea, #send, #sendArchive").attr("disabled", "disabled");
-    Log.debug("onStartSending", aMsgID, aMsgSize);
-  },
+function createSendListener(obj) {
+  return {
+    /**
+     * Notify the observer that the message has started to be delivered. This method is
+     * called only once, at the beginning of a message send operation.
+     *
+     * @return The return value is currently ignored.  In the future it may be
+     * used to cancel the URL load..
+     */
+    onStartSending: function (aMsgID, aMsgSize) {
+      pText("Sending message...");
+      //$("textarea, #send, #sendArchive").attr("disabled", "disabled");
+      Log.debug("onStartSending", aMsgID, aMsgSize);
+    },
 
-  /**
-   * Notify the observer that progress as occurred for the message send
-   */
-  onProgress: function (aMsgID, aProgress, aProgressMax) {
-    Log.debug("onProgress", aMsgID, aProgress, aProgressMax);
-  },
+    /**
+     * Notify the observer that progress as occurred for the message send
+     */
+    onProgress: function (aMsgID, aProgress, aProgressMax) {
+      //Log.debug("onProgress", aMsgID, aProgress, aProgressMax);
+    },
 
-  /**
-   * Notify the observer with a status message for the message send
-   */
-  onStatus: function (aMsgID, aMsg) {
-    Log.debug("onStatus", aMsgID, aMsg);
-  },
+    /**
+     * Notify the observer with a status message for the message send
+     */
+    onStatus: function (aMsgID, aMsg) {
+      //Log.debug("onStatus", aMsgID, aMsg);
+    },
 
-  /**
-   * Notify the observer that the message has been sent.  This method is 
-   * called once when the networking library has finished processing the 
-   * message.
-   * 
-   * This method is called regardless of whether the the operation was successful.
-   * aMsgID   The message id for the mail message
-   * status   Status code for the message send.
-   * msg      A text string describing the error.
-   * returnFileSpec The returned file spec for save to file operations.
-   */
-  onStopSending: function (aMsgID, aStatus, aMsg, aReturnFile) {
-    // if (aExitCode == NS_ERROR_SMTP_SEND_FAILED_UNKNOWN_SERVER ||
-    //     aExitCode == NS_ERROR_SMTP_SEND_FAILED_UNKNOWN_REASON ||
-    //     aExitCode == NS_ERROR_SMTP_SEND_FAILED_REFUSED ||
-    //     aExitCode == NS_ERROR_SMTP_SEND_FAILED_INTERRUPTED ||
-    //     aExitCode == NS_ERROR_SMTP_SEND_FAILED_TIMEOUT ||
-    //     aExitCode == NS_ERROR_SMTP_PASSWORD_UNDEFINED ||
-    //     aExitCode == NS_ERROR_SMTP_AUTH_FAILURE ||
-    //     aExitCode == NS_ERROR_SMTP_AUTH_GSSAPI ||
-    //     aExitCode == NS_ERROR_SMTP_AUTH_MECH_NOT_SUPPORTED ||
-    //     aExitCode == NS_ERROR_SMTP_AUTH_NOT_SUPPORTED ||
-    //     aExitCode == NS_ERROR_SMTP_AUTH_CHANGE_ENCRYPT_TO_PLAIN_NO_SSL ||
-    //     aExitCode == NS_ERROR_SMTP_AUTH_CHANGE_ENCRYPT_TO_PLAIN_SSL ||
-    //     aExitCode == NS_ERROR_SMTP_AUTH_CHANGE_PLAIN_TO_ENCRYPT ||
-    //     aExitCode == NS_ERROR_STARTTLS_FAILED_EHLO_STARTTLS)
-    //
-    // Moar in mailnews/compose/src/nsComposeStrings.h
-    Log.debug("onStopSending", aMsgID, aStatus, aMsg, aReturnFile);
-    $("textarea, #send, #sendArchive").attr("disabled", "");
-    // This function is called only when the actual send has been performed,
-    //  i.e. is not called when saving a draft (although msgCompose.SendMsg is
-    //  called...)
-    if (NS_SUCCEEDED(aStatus)) {
-      //if (gOldDraftToDelete)
-      //  msgHdrsDelete([gOldDraftToDelete]);
-      pText("Message "+aMsgID+" sent successfully"); 
-    } else {
-      pText("Couldn't send the message.");
-      Log.debug("NS_FAILED onStopSending");
-    }
-  },
+    /**
+     * Notify the observer that the message has been sent.  This method is 
+     * called once when the networking library has finished processing the 
+     * message.
+     * 
+     * This method is called regardless of whether the the operation was successful.
+     * aMsgID   The message id for the mail message
+     * status   Status code for the message send.
+     * msg      A text string describing the error.
+     * returnFileSpec The returned file spec for save to file operations.
+     */
+    onStopSending: function (aMsgID, aStatus, aMsg, aReturnFile) {
+      // Error codes in mailnews/compose/src/nsComposeStrings.h
+      // Looks like this method is not called when saving as draft.
+      Log.debug("onStopSending", aMsgID, aStatus, aMsg, aReturnFile);
+      //$("textarea, #send, #sendArchive").attr("disabled", "");
+      if (NS_SUCCEEDED(aStatus)) {
+        pText("Message "+aMsgID+" sent successfully"); 
+        obj.messageId = aMsgID;
+      } else {
+        pText("Couldn't send the message.");
+        Log.debug("NS_FAILED onStopSending");
+      }
+    },
 
-  /**
-   * Notify the observer with the folder uri before the draft is copied.
-   */
-  onGetDraftFolderURI: function (aFolderURI) {
-    Log.debug("onGetDraftFolderURI", aFolderURI);
-  },
+    /**
+     * Notify the observer with the folder uri before the draft is copied.
+     */
+    onGetDraftFolderURI: function (aFolderURI) {
+      obj.folderUri = aFolderURI;
+      Log.debug("onGetDraftFolderURI", aFolderURI);
+    },
 
-  /**
-   * Notify the observer when the user aborts the send without actually doing the send
-   * eg : by closing the compose window without Send.
-   */
-  onSendNotPerformed: function (aMsgID, aStatus) {
-    Log.debug("onSendNotPerformed", aMsgID, aStatus);
-  },
+    /**
+     * Notify the observer when the user aborts the send without actually doing the send
+     * eg : by closing the compose window without Send.
+     */
+    onSendNotPerformed: function (aMsgID, aStatus) {
+      Log.debug("onSendNotPerformed", aMsgID, aStatus);
+    },
 
-  QueryInterface: XPCOMUtils.generateQI([
-    Ci.nsIMsgSendListener,
-    Ci.nsISupports
-  ]),
+    QueryInterface: XPCOMUtils.generateQI([
+      Ci.nsIMsgSendListener,
+      Ci.nsISupports
+    ]),
+  };
 }
 
 let copyListener = {
   onStopCopy: function (aStatus) {
     Log.debug("onStopCopy", aStatus);
     if (NS_SUCCEEDED(aStatus)) {
-      //if (gOldDraftToDelete)
-      //  msgHdrsDelete(gOldDraftToDelete);
     }
   },
 
@@ -631,7 +652,7 @@ let copyListener = {
   ]),
 }
 
-function createStateListener (aDeliverType) {
+function createStateListener (obj, k) {
   return {
     NotifyComposeFieldsReady: function() {
       // ComposeFieldsReady();
@@ -645,21 +666,16 @@ function createStateListener (aDeliverType) {
 
     ComposeProcessDone: function(aResult) {
       Log.debug("ComposeProcessDone", aResult, NS_SUCCEEDED(aResult));
-      switch (aDeliverType) { 
-        case Ci.nsIMsgCompDeliverMode.Now:
-          if (NS_SUCCEEDED(aResult)) {
-            closeTab(); // defined from the outside, see monkeypatch.js
-          } else {
-            // The usual error handlers will notify the user for us.
-          }
-          break;
-
-        default:
-          Log.error("Send process completed without a handler.");
+      if (NS_SUCCEEDED(aResult)) {
+        Log.debug("Calling k", k);
+        k(obj);
+      } else {
+        // The usual error handlers will notify the user for us.
       }
     },
 
     SaveInFolderDone: function(folderURI) {
+      Log.debug(folderURI);
       // DisplaySaveFolderDlg(folderURI);
     }
   };

@@ -61,3 +61,51 @@ function addAttachmentItem(data) {
 function removeFile() {
   $(".attachments").find(":selected").remove();
 }
+
+function closeTab() {
+  let browser = window.frameElement;
+  let tabmail = window.top.document.getElementById("tabmail");
+  let tabs = tabmail.tabInfo;
+  let candidates = tabs.filter(function (x) x.browser == browser);
+  if (candidates.length == 1) {
+    tabmail.closeTab(candidates[0]);
+  } else {
+    Log.error("Couldn't find a tab to close...");
+  }
+}
+
+function onSend() {
+  gComposeSession.send({
+    k: function () {
+      gComposeSession.cleanup(kReasonSent);
+      closeTab();
+    },
+  });
+}
+
+function onDiscard() {
+  gComposeSession.cleanup(kReasonDiscard);
+  closeTab();
+}
+
+function onSave() {
+  gComposeSession.send({
+    deliverType: Ci.nsIMsgCompDeliverMode.SaveAsDraft,
+    compType: Ci.nsIMsgCompType.Draft,
+    k: function ({ folderUri, messageId, msgCompose }) {
+      // We're called too early, and draftUri is not set yet...
+      setTimeout(function () {
+        let draftUri = msgCompose.compFields.draftId;
+        Log.debug("Draft just saved!", draftUri);
+        let msgKey = draftUri.substr(draftUri.indexOf('#') + 1);
+        let folder = MailUtils.getFolderForURI(folderUri);
+        let msgHdr = folder.GetMessageHeader(msgKey);
+        if (msgHdr) {
+          if (gComposeSession.currentDraft)
+            msgHdrsDelete([gComposeSession.currentDraft]);
+          gComposeSession.currentDraft = msgHdr;
+        }
+      }, 1000);
+    },
+  });
+}
