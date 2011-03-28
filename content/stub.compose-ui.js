@@ -82,6 +82,9 @@ const kReasonSent = 0;
 const kReasonClosed = 1;
 const kReasonDiscard = 2;
 
+let isOSX = ("nsILocalFileMac" in Components.interfaces);
+function isAccel (event) (isOSX && event.metaKey || event.ctrlKey)
+
 let gComposeSession;
 
 function initialize () {
@@ -111,13 +114,19 @@ function initialize () {
   }
 
   // Register extra event listeners
-  $(window).keydown(function (event) {
-    if (event.metaKey && event.which == 13) {
-      Log.debug("Triggered the keyboard shortcut, sending...");
-      onSend();
-      return false; // otherwise it gets fired twice
+  window.addEventListener("keydown", function (event) {
+    switch (event.keyCode) {
+      case KeyEvent.DOM_VK_RETURN:
+        if (isAccel(event))
+          onSend();
+        break;
+
+      case 'S'.charCodeAt(0):
+        if (isAccel(event))
+          onSave();
+        break;
     }
-  });
+  }, false);
 }
 
 $(document).ready(function () {
