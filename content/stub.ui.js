@@ -99,12 +99,12 @@ function onSave() {
         Log.debug("Draft just saved!", draftUri);
         let msgKey = draftUri.substr(draftUri.indexOf('#') + 1);
         let folder = MailUtils.getFolderForURI(folderUri);
-        let msgHdr = folder.GetMessageHeader(msgKey);
-        if (msgHdr) {
-          if (gComposeSession.currentDraft)
-            msgHdrsDelete([gComposeSession.currentDraft]);
-          gComposeSession.currentDraft = msgHdr;
-        }
+        let currentDraft = gComposeSession.currentDraft();
+        if (currentDraft)
+          msgHdrsDelete([currentDraft]);
+        gComposeSession.currentDraft = function ()
+          folder.GetMessageHeader(msgKey)
+        ;
       }, 1000);
     },
   });

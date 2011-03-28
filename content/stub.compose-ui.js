@@ -138,7 +138,10 @@ function ComposeSession (aComposeParams) {
   //  }
   this.iComposeParams = aComposeParams;
   this.originalDraft = null;
-  this.currentDraft = null;
+  // This is a function, because by the time we get the information about the
+  // newly saved draft (right after saving it), the message header might not be
+  // ready yet... so we need to delay access to it.
+  this.currentDraft = function () null;
 }
 
 ComposeSession.prototype = {
@@ -459,8 +462,9 @@ ComposeSession.prototype = {
       case kReasonDiscard:
         if (this.originalDraft)
           msgHdrsDelete([this.originalDraft]);
-        if (this.currentDraft)
-          msgHdrsDelete([this.currentDraft]);
+        let currentDraft = this.currentDraft();
+        if (currentDraft)
+          msgHdrsDelete([currentDraft]);
         break;
 
       case kReasonClosed:
