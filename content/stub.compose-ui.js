@@ -360,9 +360,17 @@ ComposeSession.prototype = {
         if (focus)
           this.focus();
         let iframe = document.getElementsByTagName("iframe")[0];
-        iframe.contentWindow.addEventListener("keypress", function (event) {
-          self.modified = true;
-        }, false);
+        // AFAIK, ckeditor has no "onchange" event, see
+        // http://dev.ckeditor.com/ticket/900
+        let html = iframe.contentDocument.body.innerHTML;
+        (function poll () {
+          let newHtml = iframe.contentDocument.body.innerHTML;
+          if (newHtml != html)
+            self.modified = true;
+          html = newHtml;
+          // 250ms is too much, it slows things down when you are typing
+          setTimeout(poll, 1000);
+        })();
       });
     };
     // Don't know why, but the Thunderbird quoting code sometimes just appends

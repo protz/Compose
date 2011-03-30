@@ -85,6 +85,7 @@ function onSend() {
 
 function onDiscard() {
   gComposeSession.cleanup(kReasonDiscard);
+  gComposeSession.modified = true;
   closeTab();
 }
 
@@ -93,6 +94,7 @@ function onSave() {
     deliverType: Ci.nsIMsgCompDeliverMode.SaveAsDraft,
     compType: Ci.nsIMsgCompType.Draft,
     k: function ({ folderUri, messageId, msgCompose }) {
+      gComposeSession.modified = false;
       // We're called too early, and draftUri is not set yet...
       setTimeout(function () {
         let draftUri = msgCompose.compFields.draftId;
@@ -109,3 +111,13 @@ function onSave() {
     },
   });
 }
+
+window.addEventListener("beforeunload", function (event) {
+  // If there's unsaved data, prevent closing the window, otherwise, just
+  // cleanup the original draft that we won't be needing anymore. This assumes
+  // no one else is editing this draft right now.
+  if (gComposeSession.modified)
+    event.returnValue = "whatever";
+  else
+    gComposeSession.cleanup(kReasonClosed);
+}, false);
