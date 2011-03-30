@@ -24,7 +24,7 @@
         var w = jQuery('textarea.attachments').innerWidth();
         jQuery("textarea.attachments").css({ 'height' : (h-2) });
         jQuery(".attachmentActions").css({ 'width' : (w) });
-        jQuery("#subject").change();
+        document.title = $("#subject").val() || "Write...";
       });
       jQuery("#subject").change(function() {
         document.title = this.value || "Write...";

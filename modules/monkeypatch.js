@@ -163,7 +163,7 @@ MonkeyPatch.prototype = {
         // monkeyPatch: self, // unused
       };
       params.msgHdr = params.msgHdr ? msgHdrGetUri(params.msgHdr) : "";
-      params.identity = params.identity.email;
+      params.identity = params.identity ? params.identity.email : undefined;
       let url = kComposeUrl+"?"+encodeUrlParameters(params);
       let newTab = this.tabmail.openTab("chromeTab", {
         chromePage: url,

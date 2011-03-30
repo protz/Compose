@@ -289,6 +289,7 @@ $.TokenList = function (input, settings) {
                 // Save this token id
                 var id_string = li_data[i].data + ","
                 hidden_input.val(hidden_input.val() + id_string);
+                hidden_input.change();
             }
         }
     }
@@ -358,6 +359,7 @@ $.TokenList = function (input, settings) {
         // Save this token id
         var id_string = li_data.data + ","
         hidden_input.val(hidden_input.val() + id_string);
+        hidden_input.change();
         
         token_count++;
         
@@ -427,8 +429,10 @@ $.TokenList = function (input, settings) {
 
         if(end >= str.length) {
             hidden_input.val(str.slice(0, start));
+            hidden_input.change();
         } else {
             hidden_input.val(str.slice(0, start) + str.slice(end, str.length));
+            hidden_input.change();
         }
         
         token_count--;
@@ -509,6 +513,7 @@ $.TokenList = function (input, settings) {
 
               var id_string = li_data.data + ","
               hidden_input.val(hidden_input.val() + id_string);
+              hidden_input.change();
               token_count++;
               return;
             }

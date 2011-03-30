@@ -90,7 +90,9 @@ let gComposeSession;
 function initialize () {
   // Rebuild the various compose parameters from the URI.
   let aComposeParams = decodeUrlParameters(document.location.href);
-  aComposeParams.identity = gIdentities[aComposeParams.identity];
+  aComposeParams.identity = aComposeParams.identity
+    ? gIdentities[aComposeParams.identity]
+    : gIdentities["default"];
   aComposeParams.msgHdr = aComposeParams.msgHdr.length
     ? msgUriToMsgHdr(aComposeParams.msgHdr)
     : null;
@@ -151,9 +153,20 @@ function ComposeSession (aComposeParams) {
   // newly saved draft (right after saving it), the message header might not be
   // ready yet... so we need to delay access to it.
   this.currentDraft = function () null;
+  this._modified = false;
 }
 
 ComposeSession.prototype = {
+  set modified (v) {
+    Log.debug("Setting this.modified to", v);
+    dumpCallStack();
+    this._modified = v;
+  },
+
+  get modified () {
+    return this._modified;
+  },
+
   setupIdentities: function () {
     let $select = $("#from");
     let wantedId = this.iComposeParams.identity || gMsgComposeService.defaultIdentity;
@@ -168,6 +181,10 @@ ComposeSession.prototype = {
         .text(v)
       );
     }
+    let self = this;
+    $select.change(function () {
+      self.modified = true;
+    });
   },
 
   /**
@@ -219,12 +236,20 @@ ComposeSession.prototype = {
         break;
     }
     $("#subject").val(v);
+    let self = this;
+    $("#subject").change(function () {
+      self.modified = true;
+    });
   },
 
   setupAutocomplete: function () {
+    let self = this;
     let k = function (to, cc, bcc) {
       // defined in stub.completion-ui.js
       setupAutocomplete(to, cc, bcc);
+      $("#to, #cc, #bcc").change(function () {
+        self.modified = true;
+      });
     };
     switch (this.iComposeParams.type) {
       case gCompType.New:
@@ -233,7 +258,7 @@ ComposeSession.prototype = {
       case gCompType.NewsPost:
       case gCompType.Template:
       case gCompType.Redirect:
-        setupAutocomplete([], [], []);
+        k([], [], []);
         $("#to").focus();
         break;
 
@@ -311,6 +336,7 @@ ComposeSession.prototype = {
   },
 
   setupQuote: function () {
+    let self = this;
     let msgHdr = this.iComposeParams.msgHdr;
     let date = msgHdr && (new Date(msgHdr.date/1000)).toLocaleString();
     let from = msgHdr && escapeHtml(msgHdr.mime2DecodedAuthor);
@@ -333,6 +359,10 @@ ComposeSession.prototype = {
         sel.addRange(rng);
         if (focus)
           this.focus();
+        let iframe = document.getElementsByTagName("iframe")[0];
+        iframe.contentWindow.addEventListener("keypress", function (event) {
+          self.modified = true;
+        }, false);
       });
     };
     // Don't know why, but the Thunderbird quoting code sometimes just appends
