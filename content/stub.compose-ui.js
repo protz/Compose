@@ -469,11 +469,13 @@ ComposeSession.prototype = {
   setupFinal: function () {
     let self = this;
     let compType = this.iComposeParams.type;
+    let needsInitialSave = false;
     if (compType == gCompType.Draft) {
       // We want to create a working draft. If we close the window immediately,
       // after opening it, because it hasn't been modified, the original draft
       // will be deleted, so we have to have the working draft.
       self.modified = true;
+      needsInitialSave = true;
     }
     // How many minutes between two saves?
     let interval = Prefs.getInt("mail.compose.autosaveinterval");
@@ -483,6 +485,8 @@ ComposeSession.prototype = {
           Log.debug("Autosave..."), onSave(true);
         setTimeout(autoSaveTask, interval*60*1000);
       })();
+    } else if (needsInitialSave) {
+      onSave(true);
     }
   },
 

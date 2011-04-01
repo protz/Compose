@@ -89,7 +89,14 @@ function onDiscard() {
   closeTab();
 }
 
+let gSaveInProgress = false;
+
 function onSave(aBackground) {
+  if (gSaveInProgress) {
+    Log.debug("Save already in progress, aborting...");
+    return;
+  }
+  gSaveInProgress = true;
   let deliverMode = aBackground
     ? Ci.nsIMsgCompDeliverMode.AutoSaveAsDraft
     : Ci.nsIMsgCompDeliverMode.SaveAsDraft
@@ -111,6 +118,7 @@ function onSave(aBackground) {
         gComposeSession.currentDraft = function ()
           folder.GetMessageHeader(msgKey)
         ;
+        gSaveInProgress = false;
       }, 1000);
     },
   });
