@@ -105,6 +105,7 @@ function initialize () {
     gComposeSession.setupMiscFields();
     gComposeSession.setupAutocomplete();
     gComposeSession.setupQuote();
+    // Once these four have completed, they'll run gComposeSession.setupFinal()
   };
   if (aComposeParams.msgHdr) {
     MsgHdrToMimeMessage(aComposeParams.msgHdr, this, function (aMsgHdr, aMimeMessage) {
@@ -154,6 +155,7 @@ function ComposeSession (aComposeParams) {
   // ready yet... so we need to delay access to it.
   this.currentDraft = function () null;
   this._modified = false;
+  this._count = 4; // setupIdentities, setupMiscFields, setupQuote, setupAutocomplete
 }
 
 ComposeSession.prototype = {
@@ -165,6 +167,11 @@ ComposeSession.prototype = {
 
   get modified () {
     return this._modified;
+  },
+
+  _top: function () {
+    if (!--this._count)
+      this.setupFinal();
   },
 
   setupIdentities: function () {
@@ -185,6 +192,7 @@ ComposeSession.prototype = {
     $select.change(function () {
       self.modified = true;
     });
+    this._top();
   },
 
   /**
@@ -240,6 +248,7 @@ ComposeSession.prototype = {
     $("#subject").change(function () {
       self.modified = true;
     });
+    this._top();
   },
 
   setupAutocomplete: function () {
@@ -250,6 +259,7 @@ ComposeSession.prototype = {
       $("#to, #cc, #bcc").change(function () {
         self.modified = true;
       });
+      self._top();
     };
     switch (this.iComposeParams.type) {
       case gCompType.New:
@@ -371,6 +381,7 @@ ComposeSession.prototype = {
           // 250ms is too much, it slows things down when you are typing
           setTimeout(poll, 1000);
         })();
+        self._top();
       });
     };
     // Don't know why, but the Thunderbird quoting code sometimes just appends
@@ -451,6 +462,16 @@ ComposeSession.prototype = {
           focus: false
         });
         break;
+    }
+  },
+
+  setupFinal: function () {
+    let compType = this.iComposeParams.type;
+    if (compType == gCompType.Draft) {
+      // We want to create a working draft. If we close the window immediately,
+      // after opening it, because it hasn't been modified, the original draft
+      // will be deleted, so we have to have the working draft.
+      onSave(true);
     }
   },
 

@@ -89,9 +89,13 @@ function onDiscard() {
   closeTab();
 }
 
-function onSave() {
+function onSave(aBackground) {
+  let deliverMode = aBackground
+    ? Ci.nsIMsgCompDeliverMode.AutoSaveAsDraft
+    : Ci.nsIMsgCompDeliverMode.SaveAsDraft
+  ;
   gComposeSession.send({
-    deliverType: Ci.nsIMsgCompDeliverMode.SaveAsDraft,
+    deliverType: deliverMode,
     compType: Ci.nsIMsgCompType.Draft,
     k: function ({ folderUri, messageId, msgCompose }) {
       gComposeSession.modified = false;
