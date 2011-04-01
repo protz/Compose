@@ -73,6 +73,7 @@ Cu.import("resource://kompose/stdlib/msgHdrUtils.js");
 Cu.import("resource://kompose/stdlib/misc.js");
 Cu.import("resource://kompose/stdlib/send.js");
 Cu.import("resource://kompose/stdlib/compose.js");
+Cu.import("resource://kompose/prefs.js");
 Cu.import("resource://kompose/misc.js");
 Cu.import("resource://kompose/log.js");
 
@@ -161,7 +162,7 @@ function ComposeSession (aComposeParams) {
 ComposeSession.prototype = {
   set modified (v) {
     Log.debug("Setting this.modified to", v);
-    dumpCallStack();
+    //dumpCallStack();
     this._modified = v;
   },
 
@@ -466,12 +467,22 @@ ComposeSession.prototype = {
   },
 
   setupFinal: function () {
+    let self = this;
     let compType = this.iComposeParams.type;
     if (compType == gCompType.Draft) {
       // We want to create a working draft. If we close the window immediately,
       // after opening it, because it hasn't been modified, the original draft
       // will be deleted, so we have to have the working draft.
-      onSave(true);
+      self.modified = true;
+    }
+    // How many minutes between two saves?
+    let interval = Prefs.getInt("mail.compose.autosaveinterval");
+    if (Prefs.getBool("mail.compose.autosave")) {
+      (function autoSaveTask () {
+        if (self.modified)
+          Log.debug("Autosave..."), onSave(true);
+        setTimeout(autoSaveTask, interval*60*1000);
+      })();
     }
   },
 
