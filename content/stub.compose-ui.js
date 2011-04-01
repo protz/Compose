@@ -429,19 +429,20 @@ ComposeSession.prototype = {
 
       case gCompType.Draft: {
         let mimeMsg = this.iComposeParams.mimeMsg;
-        let body;
-        try {
-          (function search (obj) {
-            if (obj instanceof MimeBody) {
-              body = obj.body;
-              throw null;
-            } else if ("parts" in obj) {
-              [search(x) for each (x in obj.parts)];
-            }
-          })(mimeMsg);
-        } catch (e) {
-        }
-        setupEditor(body);
+        let bodies = [];
+        (function search (obj) {
+          if (obj instanceof MimeBody && bodies.length < 2) {
+            bodies.push(obj);
+          } else if ("parts" in obj) {
+            [search(x) for each (x in obj.parts)];
+          }
+        })(mimeMsg);
+        if (bodies.length > 0 && bodies[0].contentType == "text/html")
+          setupEditor(bodies[0].body);
+        else if (bodies.length > 1 && bodies[1].contentType == "text/html")
+          setupEditor(bodies[1].body);
+        else if (bodies.length > 0)
+          setupEditor("<pre>"+bodies[0].body+"</pre>");
         break;
       }
 
