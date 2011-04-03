@@ -77,6 +77,7 @@ function closeTab() {
 function onSend() {
   gComposeSession.send({
     k: function () {
+      gComposeSession.modified = false;
       gComposeSession.cleanup(kReasonSent);
       closeTab();
     },
