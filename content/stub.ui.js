@@ -104,7 +104,6 @@ function onSave(aBackground) {
   ;
   gComposeSession.send({
     deliverType: deliverMode,
-    compType: Ci.nsIMsgCompType.Draft,
     k: function ({ folderUri, messageId, msgCompose }) {
       gComposeSession.modified = false;
       // We're called too early, and draftUri is not set yet...

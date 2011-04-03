@@ -233,7 +233,11 @@ ComposeSession.prototype = {
         break;
 
       case gCompType.Draft:
-        v = subject;
+        // We can't use mime2DecodedSubject here, because that one strips Re:,
+        // and we don't want this to happen, because if the original draft had
+        // Re: something as a subject, now the sent message has "something…
+        // only".
+        v = this.iComposeParams.mimeMsg.get("subject");
         for each (let att in this.iComposeParams.mimeMsg.allUserAttachments) {
           // XXX this means we can't delete the original draft until we're done.
           addAttachmentItem(att); // Magically works. Hurray!
