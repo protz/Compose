@@ -68,7 +68,7 @@ mkdir --parents --verbose $TMP_DIR/chrome
 JAR_FILE=$TMP_DIR/chrome/$APP_NAME.jar
 echo "Generating $JAR_FILE..."
 for CHROME_SUBDIR in $CHROME_PROVIDERS; do
-  find $CHROME_SUBDIR -iname '.*.sw*' -prune -o -type f -print | grep -v \~ >> files
+  find $CHROME_SUBDIR -iname '.*.swp' -prune -o -type f -print | grep -v \~ >> files
 done
 
 zip -0 -r $JAR_FILE `cat files`
@@ -79,7 +79,7 @@ zip -0 -r $JAR_FILE `cat files`
 echo "Copying various files to $TMP_DIR folder..."
 for DIR in $ROOT_DIRS; do
   mkdir $TMP_DIR/$DIR
-  FILES="`find $DIR -iname '.*.sw*' -prune -o -type f -print | grep -v \~`"
+  FILES="`find $DIR -iname '.*.swp' -prune -o -type f -print | grep -v \~`"
   echo $FILES >> files
   cp --verbose --parents $FILES $TMP_DIR
 done
@@ -93,6 +93,9 @@ for ROOT_FILE in $ROOT_FILES install.rdf chrome.manifest; do
 done
 
 cd $TMP_DIR
+find . -iname '.git' -type d -exec rm -rf {} \;
+find . -iname '.*.sw*' -exec rm -f {} \;
+find . -iname 'tests' -type d -exec rm -rf {} \;
 
 if [ -f "chrome.manifest" ]; then
   echo "Preprocessing chrome.manifest..."

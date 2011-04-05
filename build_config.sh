@@ -3,7 +3,7 @@
 APP_NAME=kompose
 CHROME_PROVIDERS="content locale skin"
 CLEAN_UP=1
-ROOT_FILES="icon.png"
-ROOT_DIRS="modules"
+ROOT_FILES="icon.png README.md"
+ROOT_DIRS="modules defaults"
 BEFORE_BUILD=
 AFTER_BUILD=
